@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { Button } from '@/components/ui/button'
+import { BRAND, Logo } from '@/lib/brand'
 
 const schema = z.object({
   otp: z.string().length(6, 'Please enter the 6-digit code.'),
@@ -91,12 +92,8 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
 
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-[#0066FF]">
-            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span className="text-sm font-semibold text-white">Ghana Payroll</span>
+          <Logo size={28} />
+          <span className="text-sm font-semibold text-white">{BRAND.name}</span>
         </div>
 
         {/* Step context */}

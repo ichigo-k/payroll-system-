@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: ui-monospace, monospace;
+  --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -48,102 +48,98 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Light — clean slate workspace */
 :root {
-  /* Indigo-based primary */
-  --primary: oklch(0.46 0.18 264);
-  --primary-foreground: oklch(0.99 0 0);
+  --background: oklch(0.985 0.003 250);
+  --foreground: oklch(0.18 0.015 250);
 
-  /* Backgrounds */
-  --background: oklch(0.975 0.005 264);
-  --foreground: oklch(0.15 0.02 264);
-
-  /* Card — pure white */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 264);
+  --card-foreground: oklch(0.18 0.015 250);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 264);
+  --popover-foreground: oklch(0.18 0.015 250);
 
-  /* Secondary — soft indigo tint */
-  --secondary: oklch(0.93 0.03 264);
-  --secondary-foreground: oklch(0.35 0.1 264);
+  /* Primary — Compass gold */
+  --primary: oklch(0.72 0.14 82);
+  --primary-foreground: oklch(0.15 0.02 250);
 
-  /* Muted */
-  --muted: oklch(0.96 0.005 264);
-  --muted-foreground: oklch(0.52 0.04 264);
+  --secondary: oklch(0.94 0.008 250);
+  --secondary-foreground: oklch(0.25 0.02 250);
 
-  /* Accent — warm amber */
-  --accent: oklch(0.92 0.06 80);
-  --accent-foreground: oklch(0.35 0.1 60);
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.5 0.02 250);
 
-  --destructive: oklch(0.577 0.245 27.325);
+  --accent: oklch(0.94 0.02 82);
+  --accent-foreground: oklch(0.3 0.08 82);
 
-  --border: oklch(0.88 0.02 264);
+  --destructive: oklch(0.62 0.22 27);
+
+  --border: oklch(0.9 0.008 250);
   --input: oklch(1 0 0);
-  --ring: oklch(0.46 0.18 264);
+  --ring: oklch(0.72 0.14 82);
 
-  /* Charts */
-  --chart-1: oklch(0.46 0.18 264);
-  --chart-2: oklch(0.6 0.15 200);
-  --chart-3: oklch(0.7 0.14 150);
-  --chart-4: oklch(0.75 0.16 80);
-  --chart-5: oklch(0.65 0.2 30);
+  --chart-1: oklch(0.72 0.14 82);
+  --chart-2: oklch(0.62 0.14 200);
+  --chart-3: oklch(0.68 0.13 150);
+  --chart-4: oklch(0.6 0.18 25);
+  --chart-5: oklch(0.55 0.16 285);
 
-  --radius: 0.25rem;
+  --radius: 0.375rem;
 
-  /* Sidebar — deep indigo */
-  --sidebar: oklch(0.22 0.07 264);
-  --sidebar-foreground: oklch(0.92 0.02 264);
-  --sidebar-primary: oklch(0.6 0.18 264);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.3 0.08 264);
-  --sidebar-accent-foreground: oklch(0.95 0.01 264);
-  --sidebar-border: oklch(0.32 0.06 264);
-  --sidebar-ring: oklch(0.6 0.18 264);
+  /* Sidebar — deep navy even in light mode, like Compass */
+  --sidebar: oklch(0.19 0.015 250);
+  --sidebar-foreground: oklch(0.85 0.008 250);
+  --sidebar-primary: oklch(0.72 0.14 82);
+  --sidebar-primary-foreground: oklch(0.15 0.02 250);
+  --sidebar-accent: oklch(0.24 0.015 250);
+  --sidebar-accent-foreground: oklch(0.96 0.005 250);
+  --sidebar-border: oklch(0.28 0.015 250);
+  --sidebar-ring: oklch(0.72 0.14 82);
 }
 
+/* Dark — the Compass default look */
 .dark {
-  --background: oklch(0.13 0.03 264);
-  --foreground: oklch(0.95 0.01 264);
+  --background: oklch(0.16 0.012 250);
+  --foreground: oklch(0.94 0.005 250);
 
-  --card: oklch(0.18 0.04 264);
-  --card-foreground: oklch(0.95 0.01 264);
+  --card: oklch(0.2 0.014 250);
+  --card-foreground: oklch(0.94 0.005 250);
 
-  --popover: oklch(0.18 0.04 264);
-  --popover-foreground: oklch(0.95 0.01 264);
+  --popover: oklch(0.2 0.014 250);
+  --popover-foreground: oklch(0.94 0.005 250);
 
-  --primary: oklch(0.65 0.2 264);
-  --primary-foreground: oklch(0.1 0.02 264);
+  --primary: oklch(0.78 0.14 82);
+  --primary-foreground: oklch(0.14 0.02 250);
 
-  --secondary: oklch(0.25 0.05 264);
-  --secondary-foreground: oklch(0.9 0.02 264);
+  --secondary: oklch(0.24 0.014 250);
+  --secondary-foreground: oklch(0.92 0.005 250);
 
-  --muted: oklch(0.25 0.04 264);
-  --muted-foreground: oklch(0.65 0.04 264);
+  --muted: oklch(0.22 0.012 250);
+  --muted-foreground: oklch(0.65 0.012 250);
 
-  --accent: oklch(0.35 0.08 80);
-  --accent-foreground: oklch(0.9 0.05 80);
+  --accent: oklch(0.3 0.06 82);
+  --accent-foreground: oklch(0.9 0.09 82);
 
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: oklch(0.68 0.2 27);
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.65 0.2 264);
+  --border: oklch(0.3 0.014 250);
+  --input: oklch(0.24 0.014 250);
+  --ring: oklch(0.78 0.14 82);
 
-  --chart-1: oklch(0.65 0.2 264);
-  --chart-2: oklch(0.65 0.15 200);
-  --chart-3: oklch(0.7 0.14 150);
-  --chart-4: oklch(0.75 0.16 80);
-  --chart-5: oklch(0.65 0.2 30);
+  --chart-1: oklch(0.78 0.14 82);
+  --chart-2: oklch(0.68 0.14 200);
+  --chart-3: oklch(0.72 0.13 150);
+  --chart-4: oklch(0.65 0.19 25);
+  --chart-5: oklch(0.6 0.16 285);
 
-  --sidebar: oklch(0.15 0.04 264);
-  --sidebar-foreground: oklch(0.92 0.02 264);
-  --sidebar-primary: oklch(0.65 0.2 264);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.05 264);
-  --sidebar-accent-foreground: oklch(0.95 0.01 264);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.65 0.2 264);
+  --sidebar: oklch(0.13 0.012 250);
+  --sidebar-foreground: oklch(0.85 0.008 250);
+  --sidebar-primary: oklch(0.78 0.14 82);
+  --sidebar-primary-foreground: oklch(0.14 0.02 250);
+  --sidebar-accent: oklch(0.2 0.015 250);
+  --sidebar-accent-foreground: oklch(0.96 0.005 250);
+  --sidebar-border: oklch(0.24 0.014 250);
+  --sidebar-ring: oklch(0.78 0.14 82);
 }
 
 @layer base {
@@ -153,9 +149,16 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01", "ss03";
   }
 
   html {
     @apply font-sans;
+  }
+
+  /* Tabular numbers for money — used implicitly by .num utility */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
   }
 }

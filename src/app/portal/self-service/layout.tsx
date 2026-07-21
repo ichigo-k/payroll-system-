@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { auth, signOut } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 import { SELF_SERVICE_NAV_ITEMS } from '@/lib/nav-items'
-import { Button } from '@/components/ui/button'
+import { BRAND, Logo } from '@/lib/brand'
 
 async function logoutAction() {
   'use server'
@@ -38,79 +38,83 @@ export default async function SelfServiceLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-
-      {/* Top nav */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card">
-        <div className="flex items-center justify-between px-8 py-0">
-
-          {/* Brand + nav */}
-          <div className="flex items-center">
-            <div className="flex items-center gap-3 border-r border-border py-4 pr-6">
-              <div className="flex h-7 w-7 items-center justify-center border border-border bg-primary">
-                <svg className="h-3.5 w-3.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <span className="text-sm font-semibold">Ghana Payroll</span>
+      {/* Top bar */}
+      <header className="sticky top-0 z-10 border-b border-border bg-card/70 backdrop-blur">
+        <div className="flex h-12 items-center px-4">
+          <div className="flex items-center gap-2.5 pr-4">
+            <Logo size={26} />
+            <div className="leading-tight">
+              <p className="text-[13px] font-semibold">{BRAND.name}</p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">Self service</p>
             </div>
-
-            <nav className="hidden items-center sm:flex">
-              {SELF_SERVICE_NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="border-r border-border px-5 py-4 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
           </div>
 
-          {/* User */}
-          <div className="flex items-center gap-4">
-            <div className="hidden items-center gap-2.5 sm:flex">
-              <div className="flex h-7 w-7 items-center justify-center border border-border bg-primary/10 text-xs font-bold text-primary">
+          <div className="h-5 w-px bg-border" />
+
+          <nav className="ml-2 hidden items-center gap-1 sm:flex">
+            {SELF_SERVICE_NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-md px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1 sm:flex">
+              <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-primary/20 text-[10px] font-semibold text-primary">
                 {initials}
               </div>
-              <span className="text-sm font-medium">{fullName}</span>
+              <span className="text-[12px] font-medium">{fullName}</span>
             </div>
             <form action={logoutAction}>
-              <Button
+              <button
                 type="submit"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 rounded-none text-xs"
+                className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-destructive/60 hover:text-destructive"
               >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 Sign out
-              </Button>
+              </button>
             </form>
           </div>
         </div>
 
         {/* Mobile nav */}
-        <div className="flex border-t border-border sm:hidden">
+        <nav className="flex border-t border-border sm:hidden">
           {SELF_SERVICE_NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="flex-1 border-r border-border px-4 py-3 text-center text-sm text-muted-foreground last:border-r-0 hover:bg-muted hover:text-foreground"
+              className="flex-1 border-r border-border px-3 py-2.5 text-center text-[12px] font-medium text-muted-foreground last:border-r-0 hover:bg-muted hover:text-foreground"
             >
               {item.label}
             </Link>
           ))}
-        </div>
+        </nav>
       </header>
 
-      <main className="flex-1 bg-background">
-        <div className="mx-auto max-w-4xl px-8 py-8">
-          {children}
-        </div>
+      <main className="flex-1">
+        <div className="mx-auto max-w-5xl p-6">{children}</div>
       </main>
 
+      <footer className="flex h-7 shrink-0 items-center gap-3 border-t border-border bg-card/60 px-3 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span>Signed in</span>
+        </div>
+        <div className="h-3 w-px bg-border" />
+        <span className="font-mono">{fullName}</span>
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="font-mono">{BRAND.name}</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span>v0.1</span>
+        </div>
+      </footer>
     </div>
   )
 }

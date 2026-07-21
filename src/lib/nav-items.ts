@@ -42,6 +42,8 @@ export function getFinancialNavItems(role: string): NavItem[] {
 }
 
 export const SELF_SERVICE_NAV_ITEMS: NavItem[] = [
-  { label: 'My Payslips',     href: '/portal/self-service/payslips' },
+  { label: 'Payslips',        href: '/portal/self-service/payslips' },
   { label: 'Payment History', href: '/portal/self-service/history' },
+  { label: 'Tax Certificate', href: '/portal/self-service/tax' },
+  { label: 'Profile',         href: '/portal/self-service/profile' },
 ]

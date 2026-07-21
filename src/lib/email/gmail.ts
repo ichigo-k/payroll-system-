@@ -8,9 +8,9 @@ async function getCompanyName(): Promise<string> {
       where: { isActive: true },
       select: { companyName: true },
     })
-    return config?.companyName ?? 'Ghana Payroll'
+    return config?.companyName ?? 'PayCompass'
   } catch {
-    return 'Ghana Payroll'
+    return 'PayCompass'
   }
 }
 
