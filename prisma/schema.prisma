@@ -1,0 +1,436 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+// ============================================================================
+// AUTH & USERS
+// ============================================================================
+
+enum Role {
+    ADMIN
+    PREPARER
+    APPROVER
+    EMPLOYEE
+}
+
+model User {
+    id           String    @id @default(cuid())
+    email        String    @unique
+    firstName    String?
+    lastName     String?
+    role         Role
+    status       String    @default("active") // active, inactive, suspended
+    createdAt    DateTime  @default(now())
+    updatedAt    DateTime  @updatedAt
+    lastLogin    DateTime?
+
+    // Relations
+    employee          Employee? // If user is an employee
+    submittedPayrolls PayrollRun[] @relation("submittedBy")
+    approvedPayrolls  PayrollRun[] @relation("approvedBy")
+    generatedReports  Report[]     @relation("generatedBy")
+    auditLogs         AuditLog[]
+
+    @@map("users")
+}
+
+// ============================================================================
+// EMPLOYEE MANAGEMENT
+// ============================================================================
+
+enum EmploymentStatus {
+    ACTIVE
+    INACTIVE
+    SUSPENDED
+    TERMINATED
+}
+
+model Employee {
+    id           String    @id @default(cuid())
+    firstName    String
+    lastName     String
+    email        String    @unique
+    employeeId   String    @unique // Unique identifier in the organization
+    ssnit_number String?   @unique // SSNIT number for Ghana
+    dateOfBirth  DateTime?
+    gender       String? // M, F, Other
+    phone        String?
+    address      String?
+    city         String?
+
+    // Employment Info
+    department       String           @default("General")
+    designation      String?
+    startDate        DateTime
+    endDate          DateTime?
+    employmentStatus EmploymentStatus @default(ACTIVE)
+
+    // Bank Info
+    bankName      String?
+    accountNumber String?
+    accountName   String?
+
+    // Created & Updated
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    createdBy String // User ID who created
+
+    // Relations
+    user           User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+    userId         String?               @unique
+    salaryConfigs  SalaryConfiguration[]
+    allowances     Allowance[]
+    deductions     Deduction[]
+    payrollDetails PayrollDetail[]
+
+    @@map("employees")
+}
+
+model Department {
+    id          String   @id @default(cuid())
+    name        String   @unique
+    code        String?  @unique
+    description String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@map("departments")
+}
+
+// ============================================================================
+// SALARY CONFIGURATION
+// ============================================================================
+
+model SalaryConfiguration {
+    id         String   @id @default(cuid())
+    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+    employeeId String
+
+    baseSalary    Decimal   @db.Decimal(12, 2)
+    effectiveFrom DateTime
+    effectiveTo   DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    createdBy String
+
+    @@index([employeeId])
+    @@map("salary_configurations")
+}
+
+enum AllowanceType {
+    HOUSING
+    TRANSPORT
+    MEAL
+    RESPONSIBILITY
+    OTHER
+}
+
+model Allowance {
+    id         String   @id @default(cuid())
+    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+    employeeId String
+
+    type        AllowanceType
+    amount      Decimal       @db.Decimal(12, 2)
+    description String?
+    frequency   String        @default("monthly") // monthly, annual, one-time
+    isActive    Boolean       @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([employeeId])
+    @@map("allowances")
+}
+
+enum DeductionType {
+    LOAN
+    VOLUNTARY
+    PENSION
+    OTHER
+}
+
+model Deduction {
+    id         String   @id @default(cuid())
+    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+    employeeId String
+
+    type        DeductionType
+    amount      Decimal       @db.Decimal(12, 2)
+    description String?
+    frequency   String        @default("monthly") // monthly, annual, one-time
+    isActive    Boolean       @default(true)
+    startDate   DateTime?
+    endDate     DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([employeeId])
+    @@map("deductions")
+}
+
+// ============================================================================
+// TAX CONFIGURATION
+// ============================================================================
+
+model TaxConfiguration {
+    id String @id @default(cuid())
+
+    year  Int
+    month Int @default(0) // 0 = year-wide, 1-12 for specific months
+
+    // PAYE (Pay As You Earn) - Ghana
+    payeThreshold Decimal @db.Decimal(12, 2) // Tax-free threshold
+    payeBrackets  String  @default("[]") // JSON array of brackets
+
+    // SSNIT (Social Security & National Insurance Trust)
+    ssnitEmployeeRate Decimal @db.Decimal(5, 2) // e.g., 5.5%
+    ssnitEmployerRate Decimal @db.Decimal(5, 2) // e.g., 13%
+
+    // Tax Exemptions & Reliefs
+    personalRelief  Decimal @db.Decimal(12, 2)
+    spouseExemption Decimal @db.Decimal(12, 2)
+    childExemption  Decimal @db.Decimal(12, 2)
+
+    // Other Settings
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    updatedBy String
+
+    @@unique([year, month])
+    @@map("tax_configurations")
+}
+
+// ============================================================================
+// PAYROLL PROCESSING
+// ============================================================================
+
+enum PayrollStatus {
+    DRAFT
+    SUBMITTED
+    APPROVED
+    REJECTED
+    PAID
+}
+
+model PayrollRun {
+    id String @id @default(cuid())
+
+    month Int // 1-12
+    year  Int
+
+    status PayrollStatus @default(DRAFT)
+
+    // Tracking
+    submittedBy   User?     @relation("submittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+    submittedById String?
+    submittedAt   DateTime?
+
+    approvedBy   User?     @relation("approvedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+    approvedById String?
+    approvedAt   DateTime?
+
+    rejectionReason String?
+
+    totalBaseSalary Decimal @default(0) @db.Decimal(15, 2)
+    totalAllowances Decimal @default(0) @db.Decimal(15, 2)
+    totalDeductions Decimal @default(0) @db.Decimal(15, 2)
+    totalTax        Decimal @default(0) @db.Decimal(15, 2)
+    totalSsnit      Decimal @default(0) @db.Decimal(15, 2)
+    totalNetPay     Decimal @default(0) @db.Decimal(15, 2)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    payrollDetails PayrollDetail[]
+    approvals      Approval[]
+    reports        Report[]        @relation("payrollRun")
+
+    @@unique([month, year])
+    @@map("payroll_runs")
+}
+
+model PayrollDetail {
+    id String @id @default(cuid())
+
+    payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+    payrollRunId String
+
+    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+    employeeId String
+
+    baseSalary      Decimal @db.Decimal(12, 2)
+    allowancesTotal Decimal @default(0) @db.Decimal(12, 2)
+    deductionsTotal Decimal @default(0) @db.Decimal(12, 2)
+
+    // Tax Calculations
+    grossIncome   Decimal @db.Decimal(12, 2) // Base + Allowances
+    taxableIncome Decimal @db.Decimal(12, 2) // Gross - Exemptions
+    paye          Decimal @default(0) @db.Decimal(12, 2)
+    ssnitEmployee Decimal @default(0) @db.Decimal(12, 2)
+    ssnitEmployer Decimal @default(0) @db.Decimal(12, 2)
+
+    // Final
+    totalDeductions Decimal @db.Decimal(12, 2) // Deductions + Tax + SSNIT
+    netPay          Decimal @db.Decimal(12, 2) // Gross - Total Deductions
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([payrollRunId, employeeId])
+    @@index([employeeId])
+    @@map("payroll_details")
+}
+
+// ============================================================================
+// APPROVAL WORKFLOW
+// ============================================================================
+
+enum ApprovalStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+model Approval {
+    id String @id @default(cuid())
+
+    payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+    payrollRunId String
+
+    status     ApprovalStatus @default(PENDING)
+    comments   String?
+    reviewedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([payrollRunId])
+    @@map("approvals")
+}
+
+// ============================================================================
+// REPORTS
+// ============================================================================
+
+enum ReportType {
+    SALARY_DETAILS
+    BANK_TRANSFER
+    TAX_REPORT
+    PAYSLIP
+    DEPARTMENT_SUMMARY
+    AUDIT_REPORT
+    STATUTORY_REPORT
+}
+
+model Report {
+    id String @id @default(cuid())
+
+    type         ReportType
+    payrollRun   PayrollRun? @relation("payrollRun", fields: [payrollRunId], references: [id], onDelete: SetNull)
+    payrollRunId String?
+
+    title       String
+    description String?
+    fileFormat  String  @default("PDF") // PDF, CSV, XLSX, JSON
+    filePath    String?
+    fileSize    BigInt?
+
+    generatedBy   User   @relation("generatedBy", fields: [generatedById], references: [id], onDelete: Restrict)
+    generatedById String
+
+    generatedAt DateTime  @default(now())
+    expiresAt   DateTime?
+
+    createdAt DateTime @default(now())
+
+    @@index([payrollRunId])
+    @@index([generatedById])
+    @@map("reports")
+}
+
+// ============================================================================
+// AUDIT & COMPLIANCE
+// ============================================================================
+
+enum AuditAction {
+    CREATE
+    UPDATE
+    DELETE
+    SUBMIT
+    APPROVE
+    REJECT
+    DOWNLOAD
+    LOGIN
+    LOGOUT
+}
+
+model AuditLog {
+    id String @id @default(cuid())
+
+    user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+    userId String
+
+    action     AuditAction
+    entityType String // e.g., "Employee", "PayrollRun", "TaxConfiguration"
+    entityId   String
+
+    changes   String? // JSON object of what changed
+    ipAddress String?
+    userAgent String?
+
+    timestamp DateTime @default(now())
+
+    @@index([userId])
+    @@index([timestamp])
+    @@index([entityType, entityId])
+    @@map("audit_logs")
+}
+
+// ============================================================================
+// SYSTEM CONFIGURATION
+// ============================================================================
+
+model SystemConfig {
+    id String @id @default(cuid())
+
+    companyName         String
+    companyRegistration String?
+    taxId               String? // Ghana Tax ID
+    logo                String? // URL or path
+
+    currency        String @default("GHS")
+    fiscalYearStart Int    @default(1) // Month (1-12)
+    fiscalYearEnd   Int    @default(12)
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("system_configs")
+}
+
+// ============================================================================
+// OTP TOKENS
+// ============================================================================
+
+model OtpToken {
+  id         String    @id @default(cuid())
+  email      String
+  tokenHash  String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  @@index([email, consumedAt])
+  @@map("otp_tokens")
+}
