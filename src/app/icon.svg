@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" role="img" aria-label="PayCompass">
+  <rect width="32" height="32" rx="8" fill="#0C66E4"/>
+  <path d="M24.86 14.44A9 9 0 1 1 17.56 7.14" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M11.05 20.95 18.12 18.12 13.88 13.88Z" fill="#FFFFFF" fill-opacity="0.55"/>
+  <path d="M24.5 7.5 18.12 18.12 13.88 13.88Z" fill="#FFFFFF"/>
+</svg>

@@ -1,136 +1,184 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ArrowRight, Check } from 'lucide-react'
 import { auth } from '@/lib/auth-config'
+import { prisma } from '@/lib/prisma'
+import { formatCurrency, hasPermission } from '@/lib/payroll'
+import { PageHeader } from '@/components/app/page-header'
+import { StatusBadge } from '@/components/app/status-badge'
+import { button, link } from '@/components/app/styles'
+import { cn } from '@/lib/utils'
 
-const ROLE_LABELS: Record<string, string> = {
-  ADMIN: 'Administrator',
-  PREPARER: 'Payroll Preparer',
-  APPROVER: 'Payroll Approver',
+export const metadata: Metadata = { title: 'Home' }
+
+function periodLabel(month: number, year: number) {
+  return new Date(year, month - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' })
 }
-
-type Stat = { label: string; value: string; sub: string; tone?: 'default' | 'primary' | 'warn' }
-
-const STATS: Stat[] = [
-  { label: 'Employees on payroll', value: '—', sub: 'Active' },
-  { label: 'Payroll runs · YTD', value: '—', sub: 'This fiscal year' },
-  { label: 'Pending approvals', value: '—', sub: 'Awaiting review', tone: 'warn' },
-  { label: 'Disbursed this month', value: '—', sub: 'GHS · gross', tone: 'primary' },
-]
-
-const QUICK_ACTIONS = [
-  { label: 'New payroll run', href: '/portal/financial/payroll', desc: 'Open the payroll workspace for the current period' },
-  { label: 'Manage employees', href: '/portal/financial/employees', desc: 'Directory, salary bands, bank details' },
-  { label: 'Approval queue', href: '/portal/financial/approvals', desc: 'Review submitted runs' },
-  { label: 'Reports & exports', href: '/portal/financial/reports', desc: 'GRA, SSNIT, bank transfer files, payslips' },
-]
-
-const RECENT_COLUMNS = ['Period', 'Status', 'Submitted by', 'Submitted', 'Net total', 'Employees'] as const
 
 export default async function FinancialDashboardPage() {
   const session = await auth()
-  const firstName = session?.user?.firstName ?? 'there'
   const role = session?.user?.role ?? ''
-  const roleLabel = ROLE_LABELS[role] ?? role
+  const firstName = session?.user?.firstName
+  const now = new Date()
+  const year = now.getFullYear()
+
+  const [activeEmployees, runsThisYear, awaitingApproval, recentRuns, taxConfigCount, employeesWithSalary] = await Promise.all([
+    prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
+    prisma.payrollRun.count({ where: { year } }),
+    prisma.payrollRun.count({ where: { status: 'SUBMITTED' } }),
+    prisma.payrollRun.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 6 }),
+    prisma.taxConfiguration.count({ where: { isActive: true } }),
+    prisma.employee.count({ where: { employmentStatus: 'ACTIVE', salaryConfigs: { some: {} } } }),
+  ])
+
+  const latestRun = recentRuns[0]
+  const canPrepare = hasPermission(role, 'submit_payroll')
+  const canApprove = hasPermission(role, 'approve_payroll')
+
+  const stats = [
+    { label: 'Active employees', value: activeEmployees.toLocaleString('en-GB'), href: '/portal/financial/employees?view=active' },
+    { label: `Payroll runs in ${year}`, value: runsThisYear.toLocaleString('en-GB') },
+    { label: 'Waiting for approval', value: awaitingApproval.toLocaleString('en-GB'), href: canApprove ? '/portal/financial/approvals' : undefined, attention: awaitingApproval > 0 },
+    { label: latestRun ? `Net pay, ${periodLabel(latestRun.month, latestRun.year)}` : 'Latest net pay', value: latestRun ? formatCurrency(Number(latestRun.totalNetPay)) : 'None yet' },
+  ]
+
+  const setup = [
+    { label: 'Add employees', detail: activeEmployees ? `${activeEmployees} active on payroll` : 'Add people or import a spreadsheet', done: activeEmployees > 0, href: '/portal/financial/employees?panel=new' },
+    { label: 'Configure PAYE and SSNIT', detail: taxConfigCount ? 'Active tax configuration in place' : 'Set brackets, reliefs and SSNIT rates', done: taxConfigCount > 0, href: '/portal/financial/tax' },
+    { label: 'Set salaries', detail: activeEmployees ? `${employeesWithSalary} of ${activeEmployees} employees have a salary` : 'Assign base salary and allowances', done: activeEmployees > 0 && employeesWithSalary >= activeEmployees, href: '/portal/financial/salary' },
+    { label: 'Run first payroll', detail: recentRuns.length ? 'Payroll history started' : 'Prepare, submit and approve a run', done: recentRuns.length > 0, href: '/portal/financial/payroll' },
+  ]
+  const currentStep = setup.findIndex((step) => !step.done)
+  const doneCount = setup.filter((step) => step.done).length
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex items-end justify-between border-b border-border pb-4">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Overview · {roleLabel}</p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight">Welcome back, {firstName}</h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">Real-time snapshot of your payroll workspace.</p>
-        </div>
-        <Link
-          href="/portal/financial/payroll"
-          className="inline-flex h-8 items-center gap-2 rounded-md border border-primary/50 bg-primary/10 px-3 text-[12px] font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          New payroll run
-        </Link>
-      </div>
+    <div>
+      <PageHeader
+        title={firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
+        description={`Here is where payroll stands for ${now.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}.`}
+        actions={
+          <>
+            {canApprove && awaitingApproval > 0 && (
+              <Link href="/portal/financial/approvals" className={button.default}>
+                Review approvals
+              </Link>
+            )}
+            {canPrepare && (
+              <Link href="/portal/financial/payroll" className={button.primary}>
+                New payroll run
+              </Link>
+            )}
+          </>
+        }
+      />
 
-      {/* Stat grid */}
-      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {STATS.map((s) => (
-          <div key={s.label} className="flex flex-col justify-between bg-card px-4 py-3.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</p>
-            <p
-              className={`num mt-2 text-2xl font-semibold tracking-tight ${
-                s.tone === 'primary' ? 'text-primary' : s.tone === 'warn' ? 'text-amber-400' : 'text-foreground'
-              }`}
-            >
-              {s.value}
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">{s.sub}</p>
+      <dl className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-4">
+        {stats.map((stat, index) => {
+          const body = (
+            <>
+              <dt className="text-sm text-muted-foreground">{stat.label}</dt>
+              <dd className={cn('num mt-1 text-2xl font-semibold tracking-tight', stat.attention ? 'text-warning' : 'text-foreground')}>{stat.value}</dd>
+            </>
+          )
+          const cellClass = cn('block px-5 first:pl-0', index % 2 === 1 && 'border-l border-border', index === 2 && 'pl-0 lg:border-l lg:pl-5')
+          return stat.href ? (
+            <Link key={stat.label} href={stat.href} className={cn(cellClass, 'hover:[&_dt]:text-primary hover:[&_dt]:underline')}>
+              {body}
+            </Link>
+          ) : (
+            <div key={stat.label} className={cellClass}>
+              {body}
+            </div>
+          )
+        })}
+      </dl>
+
+      <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <section aria-labelledby="recent-runs">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 id="recent-runs" className="text-base font-semibold">
+              Recent payroll runs
+            </h2>
+            {recentRuns.length > 0 && (
+              <Link href="/portal/financial/payroll" className={cn(link, 'text-sm')}>
+                View all runs
+              </Link>
+            )}
           </div>
-        ))}
-      </div>
 
-      {/* Two column: Quick actions + Recent runs */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Quick actions */}
-        <section className="rounded-md border border-border bg-card">
-          <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Quick actions</p>
-          </header>
-          <ul>
-            {QUICK_ACTIONS.map((a) => (
-              <li key={a.href} className="border-b border-border last:border-b-0">
-                <Link
-                  href={a.href}
-                  className="group flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-foreground">{a.label}</p>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{a.desc}</p>
-                  </div>
-                  <span className="text-muted-foreground transition-transform group-hover:translate-x-0.5">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {recentRuns.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-input px-6 py-10 text-center">
+              <p className="text-sm font-semibold text-foreground">No payroll runs yet</p>
+              <p className="mx-auto mt-1 max-w-[48ch] text-sm text-muted-foreground">
+                Runs show up here once they are prepared. Work through the setup steps so PAYE, SSNIT and net pay calculate correctly.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
+                    <th scope="col" className="py-2 pr-4 font-semibold">Period</th>
+                    <th scope="col" className="px-4 py-2 font-semibold">Status</th>
+                    <th scope="col" className="px-4 py-2 text-right font-semibold">Gross base</th>
+                    <th scope="col" className="px-4 py-2 text-right font-semibold">PAYE</th>
+                    <th scope="col" className="py-2 pl-4 text-right font-semibold">Net pay</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentRuns.map((run) => (
+                    <tr key={run.id} className="border-b border-border hover:bg-muted">
+                      <td className="py-2.5 pr-4 font-medium text-foreground">{periodLabel(run.month, run.year)}</td>
+                      <td className="px-4 py-2.5"><StatusBadge status={run.status} /></td>
+                      <td className="num px-4 py-2.5 text-right">{formatCurrency(Number(run.totalBaseSalary))}</td>
+                      <td className="num px-4 py-2.5 text-right">{formatCurrency(Number(run.totalTax))}</td>
+                      <td className="num py-2.5 pl-4 text-right font-semibold">{formatCurrency(Number(run.totalNetPay))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
-        {/* Recent runs — data grid style */}
-        <section className="rounded-md border border-border bg-card lg:col-span-2">
-          <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <div className="flex items-center gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recent payroll runs</p>
-              <span className="rounded border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">0 rows</span>
+        <section aria-labelledby="setup" className="xl:border-l xl:border-border xl:pl-8">
+          <h2 id="setup" className="text-base font-semibold">
+            Get payroll ready
+          </h2>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary" aria-hidden>
+              <div className="h-full rounded-full bg-success transition-[width] duration-300 ease-out" style={{ width: `${(doneCount / setup.length) * 100}%` }} />
             </div>
-            <Link href="/portal/financial/payroll" className="text-[11px] font-medium text-primary hover:underline">
-              View all
-            </Link>
-          </header>
-
-          {/* Grid header */}
-          <div className="grid grid-cols-6 gap-2 border-b border-border bg-muted/30 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {RECENT_COLUMNS.map((c) => (
-              <span key={c}>{c}</span>
-            ))}
+            <span className="num text-xs text-muted-foreground">
+              {doneCount} of {setup.length}
+            </span>
           </div>
-
-          {/* Empty state */}
-          <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <p className="text-[13px] font-medium text-foreground">No payroll runs yet</p>
-            <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
-              Once you start a payroll run, it will appear here with status, totals and reviewers.
-            </p>
-            <Link
-              href="/portal/financial/payroll"
-              className="mt-4 inline-flex h-7 items-center gap-1.5 rounded border border-border bg-muted/40 px-2.5 text-[11px] font-medium text-foreground hover:bg-muted"
-            >
-              Start a run
-              <span>→</span>
-            </Link>
-          </div>
+          <ol className="mt-4 -mx-2">
+            {setup.map((step, index) => {
+              const isCurrent = index === currentStep
+              return (
+                <li key={step.label}>
+                  <Link href={step.href} className={cn('group flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 hover:bg-muted', isCurrent && 'bg-accent hover:bg-accent')}>
+                    <span
+                      className={cn(
+                        'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-semibold',
+                        step.done && 'border-success bg-success text-white',
+                        isCurrent && 'border-primary text-primary',
+                        !step.done && !isCurrent && 'border-input text-subtlest',
+                      )}
+                    >
+                      {step.done ? <Check className="size-3" strokeWidth={3} /> : index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={cn('block text-sm font-medium', step.done ? 'text-muted-foreground line-through decoration-subtlest/50' : 'text-foreground')}>{step.label}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{step.detail}</span>
+                    </span>
+                    <ArrowRight className="mt-0.5 size-4 shrink-0 text-subtlest opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100" />
+                  </Link>
+                </li>
+              )
+            })}
+          </ol>
         </section>
       </div>
     </div>

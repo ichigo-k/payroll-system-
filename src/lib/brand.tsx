@@ -1,72 +1,99 @@
 import type { SVGProps } from 'react'
+import { cn } from '@/lib/utils'
 
 export const BRAND = {
   name: 'PayCompass',
-  tagline: 'Payroll · reimagined',
+  tagline: 'Payroll for teams in Ghana',
   copyright: `© ${new Date().getFullYear()} PayCompass`,
+  colors: {
+    brand: '#0C66E4',
+    ink: '#172B4D',
+  },
 } as const
 
-export function Logo({
-  size = 28,
-  className,
-  ...props
-}: SVGProps<SVGSVGElement> & { size?: number }) {
+/**
+ * Mark geometry on a 32 x 32 grid, shared by the React components and the static SVG files
+ * (src/app/icon.svg, public/brand/*.svg). If you change a path here, update those files too.
+ *
+ * - Tile: rounded square, 25% corner radius (Atlassian app-icon proportions)
+ * - Ring: an open "C" for Compass, gap facing north-east
+ * - Needle: a kite pointing north-east through the gap; the bold half leads, the soft half trails
+ */
+export const LOGO_GEOMETRY = {
+  viewBox: '0 0 32 32',
+  tileRadius: 8,
+  ring: 'M24.86 14.44A9 9 0 1 1 17.56 7.14',
+  ringWidth: 2.5,
+  needleLead: 'M24.5 7.5 18.12 18.12 13.88 13.88Z',
+  needleTrail: 'M11.05 20.95 18.12 18.12 13.88 13.88Z',
+} as const
+
+export type LogoAppearance = 'brand' | 'inverse' | 'neutral'
+
+const MARK_COLORS: Record<LogoAppearance, { tile: string; glyph: string; trailOpacity: number }> = {
+  // Blue tile, white glyph. Default on light surfaces.
+  brand: { tile: BRAND.colors.brand, glyph: '#FFFFFF', trailOpacity: 0.55 },
+  // White tile, blue glyph. For dark or photo backgrounds.
+  inverse: { tile: '#FFFFFF', glyph: BRAND.colors.brand, trailOpacity: 0.45 },
+  // No tile, glyph in currentColor. For monochrome contexts (print, watermarks, single-color UI).
+  neutral: { tile: 'none', glyph: 'currentColor', trailOpacity: 0.5 },
+}
+
+type MarkProps = Omit<SVGProps<SVGSVGElement>, 'children'> & {
+  size?: number
+  appearance?: LogoAppearance
+  /** Accessible name. Omit when the mark sits next to a visible wordmark. */
+  title?: string
+}
+
+/** The PayCompass app icon on its own. */
+export function LogoMark({ size = 32, appearance = 'brand', title, className, ...props }: MarkProps) {
+  const colors = MARK_COLORS[appearance]
+  const g = LOGO_GEOMETRY
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox={g.viewBox}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="PayCompass logo"
-      role="img"
+      className={cn('shrink-0', className)}
+      role={title ? 'img' : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
       {...props}
     >
-      <defs>
-        <linearGradient id="pc-tile" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#0F1720" />
-          <stop offset="100%" stopColor="#1B2532" />
-        </linearGradient>
-        <linearGradient id="pc-needle-n" x1="16" y1="4" x2="16" y2="16" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F5CE5A" />
-          <stop offset="100%" stopColor="#C9A227" />
-        </linearGradient>
-        <linearGradient id="pc-needle-s" x1="16" y1="16" x2="16" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3B4657" />
-          <stop offset="100%" stopColor="#252E3B" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="32" height="32" rx="7" fill="url(#pc-tile)" />
-      <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" stroke="#2A3546" strokeOpacity="0.6" />
-      <path d="M16 4 L19.2 16 L16 16 Z" fill="url(#pc-needle-n)" />
-      <path d="M16 4 L12.8 16 L16 16 Z" fill="#E5B93E" opacity="0.75" />
-      <path d="M16 28 L12.8 16 L16 16 Z" fill="url(#pc-needle-s)" />
-      <path d="M16 28 L19.2 16 L16 16 Z" fill="#4B5769" opacity="0.9" />
-      <circle cx="16" cy="16" r="1.6" fill="#F5CE5A" />
-      <circle cx="16" cy="16" r="0.6" fill="#0F1720" />
+      {colors.tile !== 'none' && <rect width="32" height="32" rx={g.tileRadius} fill={colors.tile} />}
+      <path d={g.ring} stroke={colors.glyph} strokeWidth={g.ringWidth} strokeLinecap="round" />
+      <path d={g.needleTrail} fill={colors.glyph} fillOpacity={colors.trailOpacity} />
+      <path d={g.needleLead} fill={colors.glyph} />
     </svg>
   )
 }
 
-export function LogoMono({ size = 24, className, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
+/** Mark plus wordmark. Wordmark size scales with the mark. */
+export function Logo({
+  size = 24,
+  appearance = 'brand',
+  wordmark = true,
+  className,
+}: {
+  size?: number
+  appearance?: LogoAppearance
+  wordmark?: boolean
+  className?: string
+}) {
+  if (!wordmark) return <LogoMark size={size} appearance={appearance} title={BRAND.name} className={className} />
+
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="PayCompass mark"
-      role="img"
-      {...props}
-    >
-      <path d="M16 3 L20 16 L16 16 Z" fill="currentColor" />
-      <path d="M16 3 L12 16 L16 16 Z" fill="currentColor" opacity="0.55" />
-      <path d="M16 29 L12 16 L16 16 Z" fill="currentColor" opacity="0.35" />
-      <path d="M16 29 L20 16 L16 16 Z" fill="currentColor" opacity="0.5" />
-      <circle cx="16" cy="16" r="1.4" fill="currentColor" />
-    </svg>
+    <span className={cn('inline-flex items-center', className)} style={{ gap: Math.round(size * 0.35) }}>
+      <LogoMark size={size} appearance={appearance} />
+      <span
+        className={cn('leading-none font-semibold whitespace-nowrap', appearance === 'inverse' ? 'text-white' : 'text-foreground')}
+        style={{ fontSize: Math.round(size * 0.66), letterSpacing: '-0.02em' }}
+      >
+        {BRAND.name}
+      </span>
+    </span>
   )
 }

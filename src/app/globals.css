@@ -39,107 +39,123 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+
+  /* Semantic status colors */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--destructive);
+  --color-danger-soft: var(--danger-soft);
+  --color-brand-deep: var(--brand-deep);
+  --color-subtlest: var(--subtlest);
+  --color-primary-strong: var(--primary-strong);
+
+  /* One radius scale: 6px for controls and surfaces, 3px for lozenges */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.5);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
-/* Light — clean slate workspace */
+/* Light: Atlassian Cloud-style workspace */
 :root {
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.18 0.015 250);
+  --background: #ffffff;
+  --foreground: #172b4d;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.015 250);
+  --card: #ffffff;
+  --card-foreground: #172b4d;
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.015 250);
+  --popover: #ffffff;
+  --popover-foreground: #172b4d;
 
-  /* Primary — Compass gold */
-  --primary: oklch(0.72 0.14 82);
-  --primary-foreground: oklch(0.15 0.02 250);
+  --primary: #0c66e4;
+  --primary-strong: #0055cc;
+  --primary-foreground: #ffffff;
 
-  --secondary: oklch(0.94 0.008 250);
-  --secondary-foreground: oklch(0.25 0.02 250);
+  --secondary: #f1f2f4;
+  --secondary-foreground: #44546f;
 
-  --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.5 0.02 250);
+  --muted: #f7f8f9;
+  --muted-foreground: #44546f;
+  --subtlest: #626f86;
 
-  --accent: oklch(0.94 0.02 82);
-  --accent-foreground: oklch(0.3 0.08 82);
+  --accent: #e9f2ff;
+  --accent-foreground: #0c66e4;
 
-  --destructive: oklch(0.62 0.22 27);
+  --destructive: #ae2e24;
+  --danger-soft: #ffeceb;
+  --success: #216e4e;
+  --success-soft: #dcfff1;
+  --warning: #a54800;
+  --warning-soft: #fff7d6;
 
-  --border: oklch(0.9 0.008 250);
-  --input: oklch(1 0 0);
-  --ring: oklch(0.72 0.14 82);
+  --brand-deep: #09326c;
 
-  --chart-1: oklch(0.72 0.14 82);
-  --chart-2: oklch(0.62 0.14 200);
-  --chart-3: oklch(0.68 0.13 150);
-  --chart-4: oklch(0.6 0.18 25);
-  --chart-5: oklch(0.55 0.16 285);
+  --border: #dfe1e6;
+  --input: #b3b9c4;
+  --ring: #388bff;
+
+  --chart-1: #0c66e4;
+  --chart-2: #1d7afc;
+  --chart-3: #22a06b;
+  --chart-4: #e2b203;
+  --chart-5: #c9372c;
 
   --radius: 0.375rem;
 
-  /* Sidebar — deep navy even in light mode, like Compass */
-  --sidebar: oklch(0.19 0.015 250);
-  --sidebar-foreground: oklch(0.85 0.008 250);
-  --sidebar-primary: oklch(0.72 0.14 82);
-  --sidebar-primary-foreground: oklch(0.15 0.02 250);
-  --sidebar-accent: oklch(0.24 0.015 250);
-  --sidebar-accent-foreground: oklch(0.96 0.005 250);
-  --sidebar-border: oklch(0.28 0.015 250);
-  --sidebar-ring: oklch(0.72 0.14 82);
+  /* Sidebar: light and lightweight, like Jira Cloud */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #44546f;
+  --sidebar-primary: #0c66e4;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f2f4;
+  --sidebar-accent-foreground: #172b4d;
+  --sidebar-border: #dfe1e6;
+  --sidebar-ring: #388bff;
 }
 
-/* Dark — the Compass default look */
 .dark {
-  --background: oklch(0.16 0.012 250);
-  --foreground: oklch(0.94 0.005 250);
-
-  --card: oklch(0.2 0.014 250);
-  --card-foreground: oklch(0.94 0.005 250);
-
-  --popover: oklch(0.2 0.014 250);
-  --popover-foreground: oklch(0.94 0.005 250);
-
-  --primary: oklch(0.78 0.14 82);
-  --primary-foreground: oklch(0.14 0.02 250);
-
-  --secondary: oklch(0.24 0.014 250);
-  --secondary-foreground: oklch(0.92 0.005 250);
-
-  --muted: oklch(0.22 0.012 250);
-  --muted-foreground: oklch(0.65 0.012 250);
-
-  --accent: oklch(0.3 0.06 82);
-  --accent-foreground: oklch(0.9 0.09 82);
-
-  --destructive: oklch(0.68 0.2 27);
-
-  --border: oklch(0.3 0.014 250);
-  --input: oklch(0.24 0.014 250);
-  --ring: oklch(0.78 0.14 82);
-
-  --chart-1: oklch(0.78 0.14 82);
-  --chart-2: oklch(0.68 0.14 200);
-  --chart-3: oklch(0.72 0.13 150);
-  --chart-4: oklch(0.65 0.19 25);
-  --chart-5: oklch(0.6 0.16 285);
-
-  --sidebar: oklch(0.13 0.012 250);
-  --sidebar-foreground: oklch(0.85 0.008 250);
-  --sidebar-primary: oklch(0.78 0.14 82);
-  --sidebar-primary-foreground: oklch(0.14 0.02 250);
-  --sidebar-accent: oklch(0.2 0.015 250);
-  --sidebar-accent-foreground: oklch(0.96 0.005 250);
-  --sidebar-border: oklch(0.24 0.014 250);
-  --sidebar-ring: oklch(0.78 0.14 82);
+  --background: #1d2125;
+  --foreground: #b6c2cf;
+  --card: #22272b;
+  --card-foreground: #b6c2cf;
+  --popover: #282e33;
+  --popover-foreground: #b6c2cf;
+  --primary: #579dff;
+  --primary-strong: #85b8ff;
+  --primary-foreground: #1d2125;
+  --secondary: #2c333a;
+  --secondary-foreground: #9fadbc;
+  --muted: #161a1d;
+  --muted-foreground: #9fadbc;
+  --subtlest: #8c9bab;
+  --accent: #092957;
+  --accent-foreground: #579dff;
+  --destructive: #fd9891;
+  --danger-soft: #42221f;
+  --success: #7ee2b8;
+  --success-soft: #1c3329;
+  --warning: #fec195;
+  --warning-soft: #533f04;
+  --brand-deep: #082145;
+  --border: #38414a;
+  --input: #738496;
+  --ring: #85b8ff;
+  --sidebar: #1d2125;
+  --sidebar-foreground: #9fadbc;
+  --sidebar-primary: #579dff;
+  --sidebar-primary-foreground: #1d2125;
+  --sidebar-accent: #2c333a;
+  --sidebar-accent-foreground: #b6c2cf;
+  --sidebar-border: #38414a;
+  --sidebar-ring: #85b8ff;
 }
 
 @layer base {
@@ -147,18 +163,71 @@
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01", "ss03";
-  }
-
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
 
-  /* Tabular numbers for money — used implicitly by .num utility */
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Tabular numbers for money and IDs */
   .num {
     font-variant-numeric: tabular-nums;
-    font-family: var(--font-mono);
+  }
+}
+
+/* Press feedback for anything clickable. Hover color changes stay short; press scales subtly. */
+@utility pressable {
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+/* Inline panels that open on demand (new employee, import). Rare action, so a short entrance is fine. */
+@utility panel-enter {
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Reduced motion: drop movement, keep the color and opacity changes that aid comprehension */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .pressable:active:not(:disabled) {
+    transform: none;
+  }
+
+  .panel-enter {
+    @starting-style {
+      transform: none;
+    }
   }
 }
