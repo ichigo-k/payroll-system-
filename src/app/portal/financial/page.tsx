@@ -1,186 +1,271 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, Check } from 'lucide-react'
-import { auth } from '@/lib/auth-config'
+import { TriangleAlert } from 'lucide-react'
+import { can, requirePermission } from '@/lib/access'
+import { ACTION_LABELS, actorName, ENTITY_LABELS } from '@/lib/audit-format'
+import { formatCurrency } from '@/lib/payroll'
+import { periodLabel } from '@/lib/payroll-runs'
 import { prisma } from '@/lib/prisma'
-import { formatCurrency, hasPermission } from '@/lib/payroll'
+import { ROLE_INFO } from '@/lib/roles'
+import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button, link } from '@/components/app/styles'
+import { OnboardingChecklist } from '@/components/app/onboarding-checklist'
+import { type ChecklistView, getChecklist } from '@/lib/checklists'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Home' }
 
-function periodLabel(month: number, year: number) {
-  return new Date(year, month - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' })
+const dateTime = (d: Date) => d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+function Stat({ label, value, href, attention }: { label: string; value: string; href?: string; attention?: boolean }) {
+  const body = (
+    <>
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className={cn('num mt-1 text-2xl font-semibold tracking-tight', attention ? 'text-warning' : 'text-foreground')}>{value}</dd>
+    </>
+  )
+  return href ? (
+    <Link href={href} className="block pr-4 hover:[&_dt]:text-primary hover:[&_dt]:underline">
+      {body}
+    </Link>
+  ) : (
+    <div className="pr-4">{body}</div>
+  )
 }
 
-export default async function FinancialDashboardPage() {
-  const session = await auth()
-  const role = session?.user?.role ?? ''
-  const firstName = session?.user?.firstName
+function RunList({ title, runs, empty, action }: { title: string; runs: { id: string; month: number; year: number; status: string; headcount: number; totalNetPay: unknown; note?: string }[]; empty: string; action?: React.ReactNode }) {
+  return (
+    <section aria-label={title}>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {action}
+      </div>
+      {runs.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="divide-y divide-border border-y border-border">
+          {runs.map((run) => (
+            <li key={run.id}>
+              <Link href={`/portal/financial/payroll/${run.id}`} className="flex items-center justify-between gap-4 px-1 py-3 transition-colors duration-150 hover:bg-muted">
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{periodLabel(run.month, run.year)}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{run.note ?? `${run.headcount} employees`}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="num text-sm font-medium">{formatCurrency(Number(run.totalNetPay))}</span>
+                  <StatusBadge status={run.status} />
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+export default async function FinancialHomePage() {
+  const actor = await currentActor()
+  if (!actor) return <NoPermission title="You don’t have access" description="Ask an administrator to check your role." />
+
   const now = new Date()
-  const year = now.getFullYear()
-
-  const [activeEmployees, runsThisYear, awaitingApproval, recentRuns, taxConfigCount, employeesWithSalary] = await Promise.all([
-    prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
-    prisma.payrollRun.count({ where: { year } }),
-    prisma.payrollRun.count({ where: { status: 'SUBMITTED' } }),
-    prisma.payrollRun.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 6 }),
-    prisma.taxConfiguration.count({ where: { isActive: true } }),
-    prisma.employee.count({ where: { employmentStatus: 'ACTIVE', salaryConfigs: { some: {} } } }),
-  ])
-
-  const latestRun = recentRuns[0]
-  const canPrepare = hasPermission(role, 'submit_payroll')
-  const canApprove = hasPermission(role, 'approve_payroll')
-
-  const stats = [
-    { label: 'Active employees', value: activeEmployees.toLocaleString('en-GB'), href: '/portal/financial/employees?view=active' },
-    { label: `Payroll runs in ${year}`, value: runsThisYear.toLocaleString('en-GB') },
-    { label: 'Waiting for approval', value: awaitingApproval.toLocaleString('en-GB'), href: canApprove ? '/portal/financial/approvals' : undefined, attention: awaitingApproval > 0 },
-    { label: latestRun ? `Net pay, ${periodLabel(latestRun.month, latestRun.year)}` : 'Latest net pay', value: latestRun ? formatCurrency(Number(latestRun.totalNetPay)) : 'None yet' },
-  ]
-
-  const setup = [
-    { label: 'Add employees', detail: activeEmployees ? `${activeEmployees} active on payroll` : 'Add people or import a spreadsheet', done: activeEmployees > 0, href: '/portal/financial/employees/new' },
-    { label: 'Configure PAYE and SSNIT', detail: taxConfigCount ? 'Active tax configuration in place' : 'Set brackets, reliefs and SSNIT rates', done: taxConfigCount > 0, href: '/portal/financial/tax' },
-    { label: 'Set salaries', detail: activeEmployees ? `${employeesWithSalary} of ${activeEmployees} employees have a salary` : 'Assign base salary and allowances', done: activeEmployees > 0 && employeesWithSalary >= activeEmployees, href: '/portal/financial/salary' },
-    { label: 'Run first payroll', detail: recentRuns.length ? 'Payroll history started' : 'Prepare, submit and approve a run', done: recentRuns.length > 0, href: '/portal/financial/payroll' },
-  ]
-  const currentStep = setup.findIndex((step) => !step.done)
-  const doneCount = setup.filter((step) => step.done).length
+  const firstName = actor.firstName
+  const checklist = await getChecklist(actor)
+  const role = actor.role
 
   return (
     <div>
       <PageHeader
         title={firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
-        description={`Here is where payroll stands for ${now.toLocaleString('en-GB', { month: 'long', year: 'numeric' })}.`}
+        description={`${ROLE_INFO[role].label}. ${now.toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}.`}
         actions={
-          <>
-            {canApprove && awaitingApproval > 0 && (
-              <Link href="/portal/financial/approvals" className={button.default}>
-                Review approvals
-              </Link>
-            )}
-            {canPrepare && (
-              <Link href="/portal/financial/payroll" className={button.primary}>
-                New payroll run
-              </Link>
-            )}
-          </>
+          can(role, 'payroll.prepare') ? (
+            <Link href="/portal/financial/payroll/new" className={button.primary}>
+              New payroll run
+            </Link>
+          ) : can(role, 'payroll.approve') ? (
+            <Link href="/portal/financial/approvals" className={button.primary}>
+              Open approval queue
+            </Link>
+          ) : can(role, 'users.manage') ? (
+            <Link href="/portal/financial/users/invite" className={button.primary}>
+              Invite user
+            </Link>
+          ) : null
         }
       />
+      {role === 'PREPARER' && <PreparerHome checklist={checklist} />}
+      {role === 'APPROVER' && <ApproverHome userId={actor.id} checklist={checklist} />}
+      {role === 'ADMIN' && <AdminHome checklist={checklist} />}
+      {role === 'AUDITOR' && <AuditorHome checklist={checklist} />}
+    </div>
+  )
+}
 
+async function currentActor() {
+  // Any workspace role can see the home page
+  return requirePermission('employees.view')
+}
+
+async function PreparerHome({ checklist }: { checklist: ChecklistView | null }) {
+  const [activeEmployees, withSalary, drafts, submitted, sentBack, latest] = await Promise.all([
+    prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
+    prisma.employee.count({ where: { employmentStatus: 'ACTIVE', salaryConfigs: { some: {} } } }),
+    prisma.payrollRun.findMany({ where: { status: 'DRAFT' }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 5, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true, submissionRound: true, rejectionReason: true } }),
+    prisma.payrollRun.count({ where: { status: 'SUBMITTED' } }),
+    prisma.payrollRun.count({ where: { status: 'DRAFT', submissionRound: { gt: 0 } } }),
+    prisma.payrollRun.findFirst({ where: { status: { in: ['APPROVED', 'PAID'] } }, orderBy: [{ year: 'desc' }, { month: 'desc' }] }),
+  ])
+  const approvedToPay = await prisma.payrollRun.findMany({ where: { status: 'APPROVED' }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 3, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true } })
+
+  return (
+    <>
       <dl className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-4">
-        {stats.map((stat, index) => {
-          const body = (
-            <>
-              <dt className="text-sm text-muted-foreground">{stat.label}</dt>
-              <dd className={cn('num mt-1 text-2xl font-semibold tracking-tight', stat.attention ? 'text-warning' : 'text-foreground')}>{stat.value}</dd>
-            </>
-          )
-          const cellClass = cn('block px-5 first:pl-0', index % 2 === 1 && 'border-l border-border', index === 2 && 'pl-0 lg:border-l lg:pl-5')
-          return stat.href ? (
-            <Link key={stat.label} href={stat.href} className={cn(cellClass, 'hover:[&_dt]:text-primary hover:[&_dt]:underline')}>
-              {body}
-            </Link>
-          ) : (
-            <div key={stat.label} className={cellClass}>
-              {body}
-            </div>
-          )
-        })}
+        <Stat label="Active employees" value={String(activeEmployees)} href="/portal/financial/employees?view=active" />
+        <Stat label="Without a salary" value={String(activeEmployees - withSalary)} href="/portal/financial/salary?view=missing" attention={activeEmployees - withSalary > 0} />
+        <Stat label="Sent back for changes" value={String(sentBack)} href="/portal/financial/payroll?view=draft" attention={sentBack > 0} />
+        <Stat label="Awaiting approval" value={String(submitted)} href="/portal/financial/payroll?view=submitted" />
       </dl>
 
       <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section aria-labelledby="recent-runs">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 id="recent-runs" className="text-base font-semibold">
-              Recent payroll runs
-            </h2>
-            {recentRuns.length > 0 && (
+        <div className="grid content-start gap-8">
+          <RunList
+            title="Drafts"
+            empty="No drafts. Start a run when you’re ready to prepare pay."
+            runs={drafts.map((r) => ({ ...r, note: r.submissionRound > 0 && r.rejectionReason ? `Changes requested: ${r.rejectionReason}` : undefined }))}
+            action={
               <Link href="/portal/financial/payroll" className={cn(link, 'text-sm')}>
-                View all runs
+                All runs
               </Link>
-            )}
-          </div>
+            }
+          />
+          {approvedToPay.length > 0 && <RunList title="Approved, ready to pay" empty="" runs={approvedToPay} />}
+          {latest && (
+            <p className="text-sm text-muted-foreground">
+              Last approved run: {periodLabel(latest.month, latest.year)}, {formatCurrency(Number(latest.totalNetPay))} net pay.
+            </p>
+          )}
+        </div>
+        <div className="xl:border-l xl:border-border xl:pl-8">
+          {checklist && <OnboardingChecklist checklist={checklist} />}
+        </div>
+      </div>
+    </>
+  )
+}
 
-          {recentRuns.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-input px-6 py-10 text-center">
-              <p className="text-sm font-semibold text-foreground">No payroll runs yet</p>
-              <p className="mx-auto mt-1 max-w-[48ch] text-sm text-muted-foreground">
-                Runs show up here once they are prepared. Work through the setup steps so PAYE, SSNIT and net pay calculate correctly.
-              </p>
-            </div>
+async function ApproverHome({ userId, checklist }: { userId: string; checklist: ChecklistView | null }) {
+  const [waiting, pendingTax, approvedThisYear, recent] = await Promise.all([
+    prisma.payrollRun.findMany({
+      where: { status: 'SUBMITTED' },
+      orderBy: { submittedAt: 'asc' },
+      select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true, submittedById: true, requestedReviewerId: true, submissionRound: true, decisions: { select: { userId: true, round: true } } },
+    }),
+    prisma.taxConfiguration.count({ where: { OR: [{ approvedAt: null }, { pendingChanges: { not: null } }] } }),
+    prisma.payrollRun.count({ where: { status: { in: ['APPROVED', 'PAID'] }, year: new Date().getFullYear() } }),
+    prisma.payrollRun.findMany({ where: { status: { in: ['APPROVED', 'PAID'] } }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 4, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true } }),
+  ])
+  const needsYou = waiting.filter((r) => r.submittedById !== userId && !r.decisions.some((d) => d.userId === userId && d.round === r.submissionRound))
+
+  return (
+    <>
+      <dl className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-4">
+        <Stat label="Waiting for you" value={String(needsYou.length)} href="/portal/financial/approvals" attention={needsYou.length > 0} />
+        <Stat label="Tax changes to review" value={String(pendingTax)} href="/portal/financial/tax" attention={pendingTax > 0} />
+        <Stat label={`Runs approved in ${new Date().getFullYear()}`} value={String(approvedThisYear)} />
+        <Stat label="Audit log" value="View" href="/portal/financial/audit" />
+      </dl>
+      <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid content-start gap-8">
+        <RunList
+          title="Needs your review"
+          empty="Nothing waiting. You’ll get a notification and an email when a run is submitted."
+          runs={needsYou.map((r) => ({ ...r, note: r.requestedReviewerId === userId ? 'Review requested from you' : `${r.headcount} employees` }))}
+        />
+        <RunList title="Recently approved" empty="No approved runs yet." runs={recent} />
+        </div>
+        <div className="xl:border-l xl:border-border xl:pl-8">{checklist && <OnboardingChecklist checklist={checklist} />}</div>
+      </div>
+    </>
+  )
+}
+
+async function AdminHome({ checklist }: { checklist: ChecklistView | null }) {
+  const [byRole, invited, deactivated, approvers, events] = await Promise.all([
+    prisma.user.groupBy({ by: ['role'], where: { status: 'active' }, _count: true }),
+    prisma.user.count({ where: { status: 'active', lastLogin: null, role: { not: 'EMPLOYEE' } } }),
+    prisma.user.count({ where: { status: { not: 'active' } } }),
+    prisma.user.count({ where: { role: 'APPROVER', status: 'active' } }),
+    prisma.auditLog.findMany({ where: { action: { notIn: ['LOGIN', 'LOGOUT'] } }, include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } }, orderBy: { timestamp: 'desc' }, take: 8 }),
+  ])
+  const count = (role: string) => byRole.find((r) => r.role === role)?._count ?? 0
+  const preparers = count('PREPARER')
+
+  return (
+    <>
+      <dl className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-4">
+        <Stat label="Preparers" value={String(preparers)} href="/portal/financial/users?view=finance" attention={preparers === 0} />
+        <Stat label="Approvers" value={String(approvers)} href="/portal/financial/users?view=finance" attention={approvers === 0} />
+        <Stat label="Invited, not signed in" value={String(invited)} href="/portal/financial/users" />
+        <Stat label="Deactivated" value={String(deactivated)} href="/portal/financial/users?view=deactivated" />
+      </dl>
+
+      <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section aria-label="Recent activity">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-base font-semibold">Recent activity</h2>
+            <Link href="/portal/financial/audit" className={cn(link, 'text-sm')}>
+              Audit log
+            </Link>
+          </div>
+          {events.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-sm">
-                <thead>
-                  <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                    <th scope="col" className="py-2 pr-4 font-semibold">Period</th>
-                    <th scope="col" className="px-4 py-2 font-semibold">Status</th>
-                    <th scope="col" className="px-4 py-2 text-right font-semibold">Gross base</th>
-                    <th scope="col" className="px-4 py-2 text-right font-semibold">PAYE</th>
-                    <th scope="col" className="py-2 pl-4 text-right font-semibold">Net pay</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentRuns.map((run) => (
-                    <tr key={run.id} className="border-b border-border hover:bg-muted">
-                      <td className="py-2.5 pr-4 font-medium text-foreground">{periodLabel(run.month, run.year)}</td>
-                      <td className="px-4 py-2.5"><StatusBadge status={run.status} /></td>
-                      <td className="num px-4 py-2.5 text-right">{formatCurrency(Number(run.totalBaseSalary))}</td>
-                      <td className="num px-4 py-2.5 text-right">{formatCurrency(Number(run.totalTax))}</td>
-                      <td className="num py-2.5 pl-4 text-right font-semibold">{formatCurrency(Number(run.totalNetPay))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y divide-border border-y border-border">
+              {events.map((e) => (
+                <li key={e.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                  <span>
+                    <span className="font-medium">{actorName(e.user)}</span> <span className="text-muted-foreground">{(ACTION_LABELS[e.action] ?? e.action).toLowerCase()}</span> {(ENTITY_LABELS[e.entityType] ?? e.entityType).toLowerCase()}
+                  </span>
+                  <span className="num shrink-0 text-xs text-subtlest">{dateTime(e.timestamp)}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
-
-        <section aria-labelledby="setup" className="xl:border-l xl:border-border xl:pl-8">
-          <h2 id="setup" className="text-base font-semibold">
-            Get payroll ready
-          </h2>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary" aria-hidden>
-              <div className="h-full rounded-full bg-success transition-[width] duration-300 ease-out" style={{ width: `${(doneCount / setup.length) * 100}%` }} />
-            </div>
-            <span className="num text-xs text-muted-foreground">
-              {doneCount} of {setup.length}
-            </span>
-          </div>
-          <ol className="mt-4 -mx-2">
-            {setup.map((step, index) => {
-              const isCurrent = index === currentStep
-              return (
-                <li key={step.label}>
-                  <Link href={step.href} className={cn('group flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 hover:bg-muted', isCurrent && 'bg-accent hover:bg-accent')}>
-                    <span
-                      className={cn(
-                        'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-semibold',
-                        step.done && 'border-success bg-success text-white',
-                        isCurrent && 'border-primary text-primary',
-                        !step.done && !isCurrent && 'border-input text-subtlest',
-                      )}
-                    >
-                      {step.done ? <Check className="size-3" strokeWidth={3} /> : index + 1}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={cn('block text-sm font-medium', step.done ? 'text-muted-foreground line-through decoration-subtlest/50' : 'text-foreground')}>{step.label}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">{step.detail}</span>
-                    </span>
-                    <ArrowRight className="mt-0.5 size-4 shrink-0 text-subtlest opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100" />
-                  </Link>
-                </li>
-              )
-            })}
-          </ol>
-        </section>
+        <div className="xl:border-l xl:border-border xl:pl-8">
+          {(preparers === 0 || approvers === 0) && (
+            <p className="mb-4 flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              Payroll needs at least one preparer and one approver, and they must be different people.
+            </p>
+          )}
+          {checklist && <OnboardingChecklist checklist={checklist} />}
+        </div>
       </div>
-    </div>
+    </>
+  )
+}
+
+async function AuditorHome({ checklist }: { checklist: ChecklistView | null }) {
+  const [runs, exports, events] = await Promise.all([
+    prisma.payrollRun.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 5, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true } }),
+    prisma.report.count(),
+    prisma.auditLog.count({ where: { timestamp: { gte: new Date(Date.now() - 30 * 86_400_000) } } }),
+  ])
+  return (
+    <>
+      <dl className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-3">
+        <Stat label="Audit events, last 30 days" value={String(events)} href="/portal/financial/audit" />
+        <Stat label="Documents exported" value={String(exports)} href="/portal/financial/reports" />
+        <Stat label="Payroll runs" value="View" href="/portal/financial/payroll" />
+      </dl>
+      <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <RunList title="Recent payroll runs" empty="No payroll runs yet." runs={runs} />
+        <div className="xl:border-l xl:border-border xl:pl-8">{checklist && <OnboardingChecklist checklist={checklist} />}</div>
+      </div>
+    </>
   )
 }
