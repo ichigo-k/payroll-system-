@@ -92,7 +92,7 @@ export function BulkImport({ existingEmails, existingIds, departments }: { exist
               <dd className="mt-1 font-mono text-xs text-foreground">{EMPLOYEE_IMPORT_COLUMNS.optional.join(', ')}</dd>
             </div>
           </dl>
-          <p className="text-xs text-subtlest">Dates use YYYY-MM-DD. New department names are created automatically.</p>
+          <p className="text-xs text-subtlest">Dates use YYYY-MM-DD. Leave employee_id blank to generate IDs, or fill it to keep IDs from another system. New departments are created automatically.</p>
         </div>
       </section>
 
@@ -179,7 +179,7 @@ export function BulkImport({ existingEmails, existingIds, departments }: { exist
                     <td className="num py-2 pr-3 text-muted-foreground">{row.line}</td>
                     <td className="px-3 py-2">{`${row.firstName} ${row.lastName}`.trim() || '-'}</td>
                     <td className="px-3 py-2">{row.email || '-'}</td>
-                    <td className="px-3 py-2 font-mono text-xs">{row.employeeId || '-'}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{row.employeeId || <span className="font-sans text-subtlest">Generated</span>}</td>
                     <td className="px-3 py-2">{row.department || 'General'}</td>
                     <td className="num px-3 py-2">{row.startDate || '-'}</td>
                     <td className="py-2 pl-3">

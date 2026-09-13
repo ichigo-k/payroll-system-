@@ -11,7 +11,7 @@ describe('parseEmployeeCsv', () => {
   const header = 'first_name,last_name,email,employee_id,start_date,department'
 
   it('reports missing required columns', () => {
-    expect(parseEmployeeCsv('first_name,last_name\nAma,Mensah').error).toMatch(/email, employee_id, start_date/)
+    expect(parseEmployeeCsv('first_name,last_name\nAma,Mensah').error).toMatch(/email, start_date/)
   })
 
   it('validates rows and flags duplicates within the file', () => {
@@ -27,5 +27,11 @@ describe('parseEmployeeCsv', () => {
     const { rows, error } = parseEmployeeCsv(`﻿${header}\nAma,Mensah,ama@example.com,EMP-1,2026-01-15,`)
     expect(error).toBeUndefined()
     expect(rows).toHaveLength(1)
+  })
+
+  it('allows a blank employee ID so one can be generated', () => {
+    const { rows } = parseEmployeeCsv(`${header}\nAma,Mensah,ama@example.com,,2026-01-15,`)
+    expect(rows[0].errors).toEqual([])
+    expect(rows[0].employeeId).toBe('')
   })
 })

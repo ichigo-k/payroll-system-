@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { requireRole } from '@/lib/access'
+import { requirePermission } from '@/lib/access'
 import { listDepartments } from '@/lib/departments'
 import { prisma } from '@/lib/prisma'
 import { NoPermission } from '@/components/app/no-permission'
@@ -9,8 +9,8 @@ import { BulkImport } from '../bulk-import'
 export const metadata: Metadata = { title: 'Import employees' }
 
 export default async function ImportEmployeesPage() {
-  const actor = await requireRole(['ADMIN', 'PREPARER'])
-  if (!actor) return <NoPermission title="You can’t import employees" description="Only administrators and payroll preparers can add people to payroll." />
+  const actor = await requirePermission('employees.edit')
+  if (!actor) return <NoPermission title="You can’t import employees" description="Only payroll preparers can add people to payroll." />
 
   const [existing, departments] = await Promise.all([prisma.employee.findMany({ select: { email: true, employeeId: true } }), listDepartments()])
 

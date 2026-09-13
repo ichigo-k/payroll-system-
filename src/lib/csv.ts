@@ -24,8 +24,8 @@ export function parseCsvLine(line: string) {
 }
 
 export const EMPLOYEE_IMPORT_COLUMNS = {
-  required: ['first_name', 'last_name', 'email', 'employee_id', 'start_date'],
-  optional: ['department', 'designation', 'phone', 'ssnit_number'],
+  required: ['first_name', 'last_name', 'email', 'start_date'],
+  optional: ['employee_id', 'department', 'designation', 'phone', 'ssnit_number'],
 } as const
 
 export type EmployeeImportRow = {
@@ -76,12 +76,11 @@ export function parseEmployeeCsv(csv: string): { rows: EmployeeImportRow[]; erro
     if (!row.firstName) row.errors.push('First name is missing')
     if (!row.lastName) row.errors.push('Last name is missing')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) row.errors.push('Email is missing or invalid')
-    if (!row.employeeId) row.errors.push('Employee ID is missing')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(row.startDate) || Number.isNaN(new Date(row.startDate).getTime())) row.errors.push('Start date must be YYYY-MM-DD')
     if (row.email && seenEmails.has(row.email)) row.errors.push('Email appears earlier in this file')
     if (row.employeeId && seenIds.has(row.employeeId)) row.errors.push('Employee ID appears earlier in this file')
     seenEmails.add(row.email)
-    seenIds.add(row.employeeId)
+    if (row.employeeId) seenIds.add(row.employeeId)
     return row
   })
   return { rows }
