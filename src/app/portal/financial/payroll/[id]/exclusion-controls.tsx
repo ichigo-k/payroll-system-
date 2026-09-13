@@ -8,6 +8,7 @@ import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { excludeEmployeeAction, includeEmployeeAction } from '../actions'
+import { safeAction } from '@/lib/safe-action'
 
 const REASONS = ['Unpaid leave', 'Paid separately this month', 'Pay on hold pending investigation', 'Missing bank or statutory details', 'Other']
 
@@ -22,7 +23,7 @@ export function ExcludeButton({ runId, employeeId, name, period }: { runId: stri
   const submit = () =>
     startTransition(async () => {
       const full = reason === 'Other' ? note.trim() : [reason, note.trim()].filter(Boolean).join(': ')
-      const result = await excludeEmployeeAction(runId, employeeId, full)
+      const result = await safeAction(() => excludeEmployeeAction(runId, employeeId, full))
       showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
       if (result.ok) {
         setOpen(false)
@@ -89,7 +90,7 @@ export function IncludeButton({ runId, employeeId, name }: { runId: string; empl
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          const result = await includeEmployeeAction(runId, employeeId)
+          const result = await safeAction(() => includeEmployeeAction(runId, employeeId))
           showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
           if (result.ok) router.refresh()
         })

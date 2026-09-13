@@ -18,6 +18,7 @@ import {
   unblockSelfServiceAction,
 } from '../users/actions'
 import { RolePicker } from '../users/role-picker'
+import { safeAction } from '@/lib/safe-action'
 
 const itemClass =
   'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
@@ -49,7 +50,7 @@ export function EmployeeAccessActions({
 
   const run = (action: () => Promise<ActionResult>) =>
     startTransition(async () => {
-      const result = await action()
+      const result = await safeAction(action)
       showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
       if (result.ok) {
         setConfirm(null)

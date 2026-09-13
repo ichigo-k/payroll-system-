@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import { commentAction } from '../actions'
+import { safeAction } from '@/lib/safe-action'
 
 export function CommentForm({ runId, initials }: { runId: string; initials: string }) {
   const router = useRouter()
@@ -16,7 +17,7 @@ export function CommentForm({ runId, initials }: { runId: string; initials: stri
   function submit() {
     if (!body.trim()) return
     startTransition(async () => {
-      const result = await commentAction(runId, body)
+      const result = await safeAction(() => commentAction(runId, body))
       if (!result.ok) {
         showFlag({ tone: 'error', title: result.message })
         return

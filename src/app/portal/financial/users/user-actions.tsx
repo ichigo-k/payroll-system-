@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { changeRoleAction, linkEmployeeAction, resendInviteAction, setStatusAction, unlinkEmployeeAction } from './actions'
 import type { UnlinkedEmployee } from './invite-user-form'
 import { RolePicker } from './role-picker'
+import { safeAction } from '@/lib/safe-action'
 
 export type UserRowData = {
   id: string
@@ -40,7 +41,7 @@ export function UserActions({ user, isSelf, employees }: { user: UserRowData; is
 
   const run = (action: () => Promise<ActionResult>, after?: () => void) =>
     startTransition(async () => {
-      const result = await action()
+      const result = await safeAction(action)
       showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
       if (result.ok) {
         setDialog(null)
