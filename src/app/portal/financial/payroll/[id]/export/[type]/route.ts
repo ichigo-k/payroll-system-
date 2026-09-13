@@ -1,10 +1,17 @@
+import { createElement } from 'react'
 import type { ReportType } from '@prisma/client'
 import { audit, requirePermission } from '@/lib/access'
-import { buildExport, EXPORT_TYPES, type ExportType, exportFilename } from '@/lib/payroll-exports'
-import { periodLabel } from '@/lib/payroll-runs'
+import { actorName } from '@/lib/audit-format'
+import { buildRows, EXPORT_TYPES, toCsv, type ExportFormat, type ExportType, exportFilename } from '@/lib/payroll-exports'
+import { CONTENT_TYPES, renderPdf } from '@/lib/pdf/render'
+import { BankInstructionDocument, PayeScheduleDocument, PayslipsDocument, RunSummaryDocument, SsnitScheduleDocument } from '@/lib/pdf/run-documents'
 import { prisma } from '@/lib/prisma'
+import { loadRunDocumentData } from '@/lib/run-document-data'
+import { rowsToXlsx } from '@/lib/xlsx'
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string; type: string }> }) {
+const PDFS = { summary: RunSummaryDocument, payslips: PayslipsDocument, bank: BankInstructionDocument, paye: PayeScheduleDocument, ssnit: SsnitScheduleDocument } as const
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string; type: string }> }) {
   const actor = await requirePermission('reports.export')
   if (!actor) return new Response('You don’t have permission to export payroll documents.', { status: 403 })
 
@@ -12,67 +19,48 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!(type in EXPORT_TYPES)) return new Response('Unknown document type.', { status: 404 })
   const exportType = type as ExportType
   const meta = EXPORT_TYPES[exportType]
+  const requested = new URL(request.url).searchParams.get('format') as ExportFormat | null
+  const format: ExportFormat = requested && meta.formats.includes(requested) ? requested : meta.formats[0]
 
-  const run = await prisma.payrollRun.findUnique({ where: { id }, include: { payrollDetails: { orderBy: { employeeName: 'asc' } } } })
-  if (!run) return new Response('Payroll run not found.', { status: 404 })
+  const data = await loadRunDocumentData(id)
+  if (!data) return new Response('Payroll run not found.', { status: 404 })
+  const { run, info, lines, company, exportCompany, approved } = data
   // Payment files are only released for approved runs, so nobody can pay an unapproved payroll
-  if (meta.requiresApproval && run.status !== 'APPROVED' && run.status !== 'PAID') {
-    return new Response('The bank payment schedule is available once the run is approved.', { status: 409 })
+  if (meta.requiresApproval && !approved) {
+    return new Response('The bank payment documents are available once the run is approved.', { status: 409 })
   }
 
-  const config = await prisma.systemConfig.findFirst({ where: { isActive: true } })
-  const company = {
-    companyName: config?.companyName ?? 'PayCompass',
-    taxId: config?.taxId ?? null,
-    employerSsnitNumber: config?.employerSsnitNumber ?? null,
-    bankName: config?.bankName ?? null,
-    bankAccountNumber: config?.bankAccountNumber ?? null,
+  let body: Buffer | string
+  if (format === 'pdf') {
+    const Component = PDFS[exportType as keyof typeof PDFS]
+    if (!Component) return new Response('This document isn’t available as a PDF.', { status: 404 })
+    body = await renderPdf(createElement(Component, { meta: { company, generatedBy: actorName(actor), generatedAt: new Date(), draft: !approved }, run: info, lines }))
+  } else {
+    const rows = buildRows(exportType, run, lines, exportCompany)
+    body = format === 'xlsx' ? await rowsToXlsx([{ name: meta.label, rows }]) : toCsv(rows)
   }
 
-  const lines = run.payrollDetails.map((d) => ({
-    employeeCode: d.employeeCode,
-    employeeName: d.employeeName,
-    department: d.department,
-    designation: d.designation,
-    bankName: d.bankName,
-    accountName: d.accountName,
-    accountNumber: d.accountNumber,
-    ssnitNumber: d.ssnitNumber,
-    tin: d.tin,
-    baseSalary: Number(d.baseSalary),
-    allowancesTotal: Number(d.allowancesTotal),
-    grossIncome: Number(d.grossIncome),
-    ssnitEmployee: Number(d.ssnitEmployee),
-    ssnitEmployer: Number(d.ssnitEmployer),
-    reliefs: Number(d.reliefs),
-    taxableIncome: Number(d.taxableIncome),
-    paye: Number(d.paye),
-    deductionsTotal: Number(d.deductionsTotal),
-    totalDeductions: Number(d.totalDeductions),
-    netPay: Number(d.netPay),
-  }))
-
-  const csv = buildExport(exportType, run, lines, company)
-  const filename = exportFilename(exportType, run, company)
-
+  const filename = exportFilename(exportType, run, exportCompany, format)
   await prisma.report.create({
     data: {
       type: meta.reportType as ReportType,
       payrollRunId: run.id,
-      title: `${meta.label}, ${periodLabel(run.month, run.year)}`,
-      fileFormat: 'CSV',
-      fileSize: BigInt(Buffer.byteLength(csv)),
+      title: `${format === 'pdf' && meta.pdfLabel ? `${meta.label} (${meta.pdfLabel.toLowerCase()})` : meta.label}, ${info.period}`,
+      fileFormat: format.toUpperCase(),
+      fileSize: BigInt(typeof body === 'string' ? Buffer.byteLength(body) : body.length),
       generatedById: actor.id,
-      description: run.status === 'APPROVED' || run.status === 'PAID' ? null : `Exported while ${run.status.toLowerCase()}`,
+      rowCount: lines.length,
+      description: approved ? null : `Exported while ${run.status.toLowerCase()}`,
     },
   })
-  await audit({ userId: actor.id, action: 'DOWNLOAD', entityType: 'PayrollRun', entityId: run.id, changes: { document: meta.label, status: run.status, rows: lines.length } })
+  await audit({ userId: actor.id, action: 'DOWNLOAD', entityType: 'PayrollRun', entityId: run.id, changes: { document: meta.label, format: format.toUpperCase(), status: run.status, rows: lines.length } })
 
-  return new Response(csv, {
+  return new Response(typeof body === 'string' ? body : new Uint8Array(body), {
     headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Type': CONTENT_TYPES[format],
+      'Content-Disposition': `${format === 'pdf' && new URL(request.url).searchParams.has('inline') ? 'inline' : 'attachment'}; filename="${filename}"`,
       'Cache-Control': 'no-store',
     },
   })
 }
+

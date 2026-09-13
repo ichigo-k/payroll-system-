@@ -38,7 +38,7 @@ export default async function PayslipPage({ params }: { params: Promise<{ id: st
   return (
     <div>
       <div className="print:hidden">
-        <PageHeader breadcrumbs={[{ label: 'Payslips', href: '/portal/self-service/payslips' }, { label: period }]} title={`Payslip for ${period}`} actions={<PrintButton />} />
+        <PageHeader breadcrumbs={[{ label: 'Payslips', href: '/portal/self-service/payslips' }, { label: period }]} title={`Payslip for ${period}`} actions={<PrintButton pdfHref={`/portal/self-service/payslips/${line.id}/pdf`} />} />
       </div>
 
       <article className="mx-auto max-w-3xl rounded-lg border border-border bg-card p-6 print:max-w-none print:border-0 print:p-0 sm:p-8">

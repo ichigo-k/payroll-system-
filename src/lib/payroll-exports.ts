@@ -4,6 +4,8 @@
  * them against the template your bank or tax office gives you.
  */
 
+import { activeCurrency } from '@/lib/currency'
+
 export type ExportLine = {
   employeeCode: string
   employeeName: string
@@ -30,12 +32,19 @@ export type ExportLine = {
 export type ExportRun = { month: number; year: number; status: string }
 export type ExportCompany = { companyName: string; taxId: string | null; employerSsnitNumber: string | null; bankName: string | null; bankAccountNumber: string | null }
 
-export const EXPORT_TYPES = {
-  bank: { label: 'Bank payment schedule', description: 'Net pay per employee with bank details, for your bank’s bulk payment upload.', requiresApproval: true, reportType: 'BANK_TRANSFER' },
-  paye: { label: 'PAYE schedule (GRA)', description: 'Chargeable income and PAYE per employee for the monthly GRA return.', requiresApproval: false, reportType: 'TAX_REPORT' },
-  ssnit: { label: 'SSNIT contribution report', description: 'Employee and employer contributions with Tier 1 and Tier 2 split.', requiresApproval: false, reportType: 'STATUTORY_REPORT' },
-  register: { label: 'Payroll register', description: 'Every earning and deduction for every employee in this run.', requiresApproval: false, reportType: 'SALARY_DETAILS' },
-} as const
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf'
+
+export const EXPORT_TYPES: Record<
+  'summary' | 'payslips' | 'bank' | 'paye' | 'ssnit' | 'register',
+  { label: string; description: string; requiresApproval: boolean; reportType: string; formats: readonly ExportFormat[]; pdfLabel?: string }
+> = {
+  summary: { label: 'Payroll summary and approval sheet', description: 'Totals by department, what to pay GRA and SSNIT and by when, and who prepared and approved the run.', requiresApproval: false, reportType: 'DEPARTMENT_SUMMARY', formats: ['pdf'] },
+  payslips: { label: 'Payslips', description: 'One payslip per employee, itemised, in a single PDF.', requiresApproval: false, reportType: 'PAYSLIP', formats: ['pdf'] },
+  bank: { label: 'Bank payment schedule', description: 'Upload file for your bank, plus a signed payment instruction letter.', requiresApproval: true, reportType: 'BANK_TRANSFER', formats: ['csv', 'pdf'], pdfLabel: 'Instruction letter' },
+  paye: { label: 'PAYE schedule (GRA)', description: 'Chargeable income and PAYE per employee for the monthly GRA return.', requiresApproval: false, reportType: 'TAX_REPORT', formats: ['csv', 'pdf'] },
+  ssnit: { label: 'SSNIT contribution report', description: 'Employee and employer contributions with Tier 1 and Tier 2 split.', requiresApproval: false, reportType: 'STATUTORY_REPORT', formats: ['csv', 'pdf'] },
+  register: { label: 'Payroll register', description: 'Every earning and deduction for every employee in this run.', requiresApproval: false, reportType: 'SALARY_DETAILS', formats: ['xlsx', 'csv'] },
+}
 export type ExportType = keyof typeof EXPORT_TYPES
 
 // Tier 2 is the 5% of basic salary paid to a private occupational pension trustee; Tier 1 is the rest
@@ -44,6 +53,13 @@ const TIER_2_RATE = 5
 const money = (value: number) => (Math.round(value * 100) / 100).toFixed(2)
 const round2 = (value: number) => Math.round(value * 100) / 100
 
+/** Splits a line's total SSNIT contribution into Tier 1 (to SSNIT) and Tier 2 (5% of basic, to the trustee). */
+export function ssnitSplit(line: { baseSalary: number; ssnitEmployee: number; ssnitEmployer: number }) {
+  const total = round2(line.ssnitEmployee + line.ssnitEmployer)
+  const tier2 = round2((line.baseSalary * TIER_2_RATE) / 100)
+  return { total, tier1: round2(total - tier2), tier2 }
+}
+
 export function csvCell(value: string | number | null | undefined) {
   const text = value === null || value === undefined ? '' : String(value)
   // Neutralise spreadsheet formulas and quote anything with separators
@@ -51,7 +67,7 @@ export function csvCell(value: string | number | null | undefined) {
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
 }
 
-function toCsv(rows: (string | number | null)[][]) {
+export function toCsv(rows: (string | number | null)[][]) {
   // BOM so Excel opens UTF-8 correctly
   return `﻿${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}\r\n`
 }
@@ -60,39 +76,42 @@ function monthName(month: number, year: number) {
   return new Date(year, month - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' })
 }
 
-export function exportFilename(type: ExportType, run: ExportRun, company: ExportCompany) {
+export function exportFilename(type: ExportType, run: ExportRun, company: ExportCompany, format: ExportFormat = 'csv') {
   const slug = company.companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'paycompass'
   const period = `${run.year}-${String(run.month).padStart(2, '0')}`
   const draft = run.status === 'APPROVED' || run.status === 'PAID' ? '' : '-UNAPPROVED'
-  return `${slug}-${type}-${period}${draft}.csv`
+  return `${slug}-${type}-${period}${draft}.${format}`
 }
 
 export function buildExport(type: ExportType, run: ExportRun, lines: ExportLine[], company: ExportCompany): string {
+  return toCsv(buildRows(type, run, lines, company))
+}
+
+export type Cell = string | number | null
+
+/** The document as rows of cells, shared by the CSV and Excel versions. PDF-only documents have no rows. */
+export function buildRows(type: ExportType, run: ExportRun, lines: ExportLine[], company: ExportCompany): Cell[][] {
   const period = monthName(run.month, run.year)
   const sum = (key: keyof ExportLine) => round2(lines.reduce((total, line) => total + Number(line[key] ?? 0), 0))
 
   switch (type) {
     case 'bank':
-      return toCsv([
-        ['#', 'Employee ID', 'Beneficiary name', 'Bank', 'Account number', 'Amount (GHS)', 'Narration'],
+      return [
+        ['#', 'Employee ID', 'Beneficiary name', 'Bank', 'Account number', `Amount (${activeCurrency()})`, 'Narration'],
         ...lines.map((line, i) => [i + 1, line.employeeCode, line.accountName || line.employeeName, line.bankName, line.accountNumber, money(line.netPay), `Salary ${period}`]),
         ['', '', 'TOTAL', '', '', money(sum('netPay')), `${lines.length} payments from ${company.bankName ?? 'company account'} ${company.bankAccountNumber ?? ''}`.trim()],
-      ])
+      ]
     case 'paye':
-      return toCsv([
+      return [
         [`Employer: ${company.companyName}`, `Employer TIN: ${company.taxId ?? ''}`, `Period: ${period}`],
         [],
         ['#', 'TIN / Ghana Card', 'Employee ID', 'Employee name', 'Position', 'Basic salary', 'Allowances', 'Gross income', 'SSNIT (employee)', 'Reliefs', 'Chargeable income', 'PAYE'],
         ...lines.map((line, i) => [i + 1, line.tin, line.employeeCode, line.employeeName, line.designation, money(line.baseSalary), money(line.allowancesTotal), money(line.grossIncome), money(line.ssnitEmployee), money(line.reliefs), money(line.taxableIncome), money(line.paye)]),
         ['', '', '', 'TOTAL', '', money(sum('baseSalary')), money(sum('allowancesTotal')), money(sum('grossIncome')), money(sum('ssnitEmployee')), money(sum('reliefs')), money(sum('taxableIncome')), money(sum('paye'))],
-      ])
+      ]
     case 'ssnit': {
-      const rows = lines.map((line) => {
-        const total = round2(line.ssnitEmployee + line.ssnitEmployer)
-        const tier2 = round2((line.baseSalary * TIER_2_RATE) / 100)
-        return { line, total, tier1: round2(total - tier2), tier2 }
-      })
-      return toCsv([
+      const rows = lines.map((line) => ({ line, ...ssnitSplit(line) }))
+      return [
         [`Employer: ${company.companyName}`, `Employer SSNIT number: ${company.employerSsnitNumber ?? ''}`, `Period: ${period}`],
         [],
         ['#', 'SSNIT number', 'Employee ID', 'Employee name', 'Basic salary', 'Employee contribution', 'Employer contribution', 'Total contribution', 'Tier 1 (SSNIT)', 'Tier 2 (occupational)'],
@@ -109,10 +128,10 @@ export function buildExport(type: ExportType, run: ExportRun, lines: ExportLine[
           money(rows.reduce((t, r) => t + r.tier1, 0)),
           money(rows.reduce((t, r) => t + r.tier2, 0)),
         ],
-      ])
+      ]
     }
     case 'register':
-      return toCsv([
+      return [
         ['#', 'Employee ID', 'Employee name', 'Department', 'Position', 'Basic salary', 'Allowances', 'Gross income', 'SSNIT (employee)', 'SSNIT (employer)', 'Reliefs', 'Chargeable income', 'PAYE', 'Other deductions', 'Total deductions', 'Net pay', 'Bank', 'Account number'],
         ...lines.map((line, i) => [
           i + 1,
@@ -154,6 +173,8 @@ export function buildExport(type: ExportType, run: ExportRun, lines: ExportLine[
           '',
           '',
         ],
-      ])
+      ]
+    default:
+      return []
   }
 }

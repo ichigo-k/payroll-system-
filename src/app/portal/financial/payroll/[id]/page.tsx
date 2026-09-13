@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Prisma } from '@prisma/client'
-import { CircleCheck, Clock, Download, FileSpreadsheet, Lock, MessageSquare, Search, TriangleAlert, UserMinus } from 'lucide-react'
+import { CircleCheck, Clock, Download, Eye, FileSpreadsheet, FileText, Lock, MessageSquare, Search, TriangleAlert, UserMinus } from 'lucide-react'
 import { can, requirePermission } from '@/lib/access'
 import { actorName, type AuditRow, describeRunEvent, parseChanges } from '@/lib/audit-format'
 import { parsePage } from '@/lib/pagination'
@@ -36,8 +36,8 @@ const initialsOf = (u: { firstName: string | null; lastName: string | null; emai
 const FLAG_FILTERS: Record<string, { label: string; flags?: ReviewFlag[] }> = {
   all: { label: 'All employees' },
   flagged: { label: 'Flagged', flags: Object.keys(REVIEW_FLAGS) as ReviewFlag[] },
-  changes: { label: 'Changes', flags: ['NEW_EMPLOYEE', 'SALARY_CHANGED', 'BANK_CHANGED', 'NET_PAY_JUMP', 'PART_MONTH', 'LEAVER'] },
-  missing: { label: 'Missing details', flags: ['MISSING_BANK', 'MISSING_SSNIT', 'MISSING_TIN'] },
+  changes: { label: 'Changes', flags: ['NEW_EMPLOYEE', 'SALARY_CHANGED', 'BANK_CHANGED', 'NET_PAY_JUMP', 'PART_MONTH', 'LEAVER', 'RETIREMENT_AGE'] },
+  missing: { label: 'Missing details', flags: ['MISSING_BANK', 'MISSING_SSNIT', 'MISSING_TIN', 'MISSING_DOB'] },
 }
 
 export default async function PayrollRunPage({ params, searchParams }: { params: Promise<Params>; searchParams: Promise<SearchParams> }) {
@@ -460,7 +460,15 @@ async function ActivityTab({ runId, actor, canComment }: { runId: string; actor:
   )
 }
 
+const FORMAT_LABELS = { pdf: 'PDF', xlsx: 'Excel', csv: 'CSV' } as const
+
 async function DocumentsTab({ runId, base, status, canExport }: { runId: string; base: string; status: string; canExport: boolean }) {
+  const company = await prisma.systemConfig.findFirst({ where: { isActive: true }, select: { bankName: true, bankAccountNumber: true, taxId: true, employerSsnitNumber: true } })
+  const missingCompany = [
+    !company?.bankName || !company?.bankAccountNumber ? 'the salary bank account' : null,
+    !company?.taxId ? 'the employer TIN' : null,
+    !company?.employerSsnitNumber ? 'the employer SSNIT number' : null,
+  ].filter(Boolean)
   const reports = await prisma.report.findMany({
     where: { payrollRunId: runId },
     include: { generatedBy: { select: { id: true, firstName: true, lastName: true, email: true } } },
@@ -474,22 +482,35 @@ async function DocumentsTab({ runId, base, status, canExport }: { runId: string;
       {!approved && (
         <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
           <TriangleAlert className="size-4 text-warning" />
-          This run isn’t approved yet. Statutory files export with “UNAPPROVED” in the name, and the bank payment schedule unlocks after approval.
+          This run isn’t approved yet. Documents are watermarked DRAFT or named UNAPPROVED, and the bank payment documents unlock after approval.
+        </p>
+      )}
+      {missingCompany.length > 0 && (
+        <p className="mb-4 flex items-start gap-2 rounded-lg bg-warning-soft px-4 py-3 text-sm text-foreground">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+          <span>
+            Company settings are missing {missingCompany.join(', ')}, so those parts of the documents show placeholders. An administrator can add them in{' '}
+            <Link href="/portal/financial/config" className="font-medium text-primary hover:underline">
+              Settings
+            </Link>
+            .
+          </span>
         </p>
       )}
       <ul className="grid gap-3 md:grid-cols-2">
         {(Object.keys(EXPORT_TYPES) as ExportType[]).map((type) => {
           const meta = EXPORT_TYPES[type]
           const locked = meta.requiresApproval && !approved
+          const Icon = meta.formats[0] === 'pdf' ? FileText : FileSpreadsheet
           return (
             <li key={type} className="flex items-start gap-3 rounded-lg border border-border p-4">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
-                <FileSpreadsheet className="size-5" strokeWidth={1.75} />
+                <Icon className="size-5" strokeWidth={1.75} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{meta.label}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">{meta.description}</p>
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {!canExport ? (
                     <span className="text-xs text-subtlest">You don’t have permission to export.</span>
                   ) : locked ? (
@@ -498,10 +519,20 @@ async function DocumentsTab({ runId, base, status, canExport }: { runId: string;
                       Available after approval
                     </span>
                   ) : (
-                    <a href={`${base}/export/${type}`} className={button.default}>
-                      <Download className="size-4" />
-                      Download CSV
-                    </a>
+                    <>
+                      {meta.formats.map((format, index) => (
+                        <a key={format} href={`${base}/export/${type}?format=${format}`} className={index === 0 ? button.default : button.subtle}>
+                          <Download className="size-4" />
+                          {format === 'pdf' && meta.pdfLabel ? meta.pdfLabel : FORMAT_LABELS[format]}
+                        </a>
+                      ))}
+                      {meta.formats.includes('pdf') && (
+                        <a href={`${base}/export/${type}?format=pdf&inline=1`} target="_blank" rel="noreferrer" className={button.subtle}>
+                          <Eye className="size-4" />
+                          Preview
+                        </a>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
