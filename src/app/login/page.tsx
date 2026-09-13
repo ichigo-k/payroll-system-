@@ -100,7 +100,7 @@ export default function LoginPage() {
       <AuthCard
         footer={
           <p className="text-xs text-muted-foreground">
-            No access yet? Ask your HR or payroll administrator to add your email.
+            Employees: use the work email on your payroll record. Can’t sign in? Ask your HR or payroll administrator.
           </p>
         }
       >

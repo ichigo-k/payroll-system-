@@ -44,7 +44,8 @@ export async function proxy(request: NextRequest) {
     if (isFinancialPath && role === EMPLOYEE_ROLE) {
       return NextResponse.redirect(new URL('/portal/self-service', request.url))
     }
-    if (isSelfServicePath && FINANCIAL_ROLES.includes(role)) {
+    // Finance staff who are also on payroll keep access to their own payslips
+    if (isSelfServicePath && FINANCIAL_ROLES.includes(role) && !session.user.employeeId) {
       return NextResponse.redirect(new URL('/portal/financial', request.url))
     }
   }

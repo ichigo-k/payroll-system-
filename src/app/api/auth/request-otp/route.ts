@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
-import { emailTransport } from '@/lib/email'
+import { sendOtpEmail } from '@/lib/email'
 import { generateOtp } from '@/lib/otp'
+import { normalizeEmail } from '@/lib/user-rules'
+import { canRequestSignIn } from '@/lib/sign-in'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'Invalid email format.' }, { status: 400 })
   }
 
-  const { email } = parsed.data
+  const email = normalizeEmail(parsed.data.email)
 
   try {
     // Always set the cookie to the submitted email so the verify page
@@ -39,9 +41,9 @@ export async function POST(request: NextRequest) {
       path: '/',
     })
 
-    // Look up user — always return generic message regardless of outcome
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user || user.status !== 'active') {
+    // Active users and anyone on payroll can sign in. Always return the generic message
+    // so the response doesn't reveal whether an address is registered.
+    if (!(await canRequestSignIn(email))) {
       return NextResponse.json({ message: GENERIC_MSG })
     }
 
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
     })
 
     try {
-      await emailTransport.sendOtp(email, otp, OTP_EXPIRY_MINUTES)
+      await sendOtpEmail({ to: email, otp, expiresInMinutes: OTP_EXPIRY_MINUTES })
     } catch (err) {
       console.error('[request-otp] Email delivery failed:', err)
       return NextResponse.json(
