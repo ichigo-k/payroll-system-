@@ -163,7 +163,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
           <p className="text-foreground">
             Approved by {approvalsThisRound.map((d) => actorName(d.user)).join(', ') || (run.approvedBy ? actorName({ ...run.approvedBy, id: '' }) : 'an approver')}
             {run.approvedAt && ` on ${dateTime(run.approvedAt)}`}.
-            {status === 'PAID' && run.paidAt ? ` Marked as paid on ${dateTime(run.paidAt)}; payslips are visible to employees.` : ' Export the bank payment schedule, then mark the run as paid.'}
+            {status === 'PAID' && run.paidAt ? ` Marked as paid on ${dateTime(run.paidAt)}; payslips are visible to employees.` : ''}
           </p>
         </div>
       )}
