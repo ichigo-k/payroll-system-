@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   ClipboardList,
   House,
+  Receipt,
   Percent,
   ScanEye,
   ScrollText,
@@ -34,6 +35,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/portal/financial/users': UserCog,
   '/portal/financial/config': Settings,
   '/portal/financial/audit': ScrollText,
+  '/portal/self-service': Receipt,
 }
 
 const NAV_SECTIONS: { label: string; hrefs: string[] }[] = [
@@ -94,7 +96,7 @@ function NavGroup({ label, items, pathname }: { label: string; items: NavItem[];
   )
 }
 
-export function FinancialNav({ items }: { items: NavItem[] }) {
+export function FinancialNav({ items, hasSelfService = false }: { items: NavItem[]; hasSelfService?: boolean }) {
   const pathname = usePathname()
   const byHref = new Map(items.map((item) => [item.href, item]))
 
@@ -108,6 +110,14 @@ export function FinancialNav({ items }: { items: NavItem[] }) {
         if (sectionItems.length === 0) return null
         return <NavGroup key={section.label} label={section.label} items={sectionItems} pathname={pathname} />
       })}
+      {hasSelfService && (
+        <div className="mt-4 border-t border-sidebar-border pt-3">
+          <p className="px-2 pb-1 text-xs font-semibold text-subtlest">Personal</p>
+          <SidebarMenu className="gap-0.5">
+            <NavButton item={{ label: 'My pay (self-service)', href: '/portal/self-service' }} active={false} />
+          </SidebarMenu>
+        </div>
+      )}
     </nav>
   )
 }

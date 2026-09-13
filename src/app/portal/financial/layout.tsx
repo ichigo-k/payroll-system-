@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, Search } from 'lucide-react'
+import { LogOut, Receipt, Search } from 'lucide-react'
 import { auth, signOut } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 import { getFinancialNavItems } from '@/lib/nav-items'
 import { BRAND, Logo, LogoMark } from '@/lib/brand'
 import { FinancialNav } from '@/components/app/financial-nav'
 import { CreateMenu } from '@/components/app/create-menu'
+import { FlagProvider } from '@/components/app/flags'
 import { button } from '@/components/app/styles'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
@@ -68,6 +69,12 @@ export default async function FinancialLayout({ children }: { children: React.Re
         </form>
 
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
+          {session.user.employeeId && (
+            <Link href="/portal/self-service" className={`${button.subtle} hidden sm:inline-flex`}>
+              <Receipt className="size-4" />
+              My pay
+            </Link>
+          )}
           <CreateMenu role={role} />
           <span aria-hidden className="mx-1 hidden h-6 w-px bg-border sm:block" />
           <div className="hidden text-right leading-tight lg:block">
@@ -92,7 +99,7 @@ export default async function FinancialLayout({ children }: { children: React.Re
       <div className="flex flex-1">
         <Sidebar className="top-14 h-[calc(100svh-3.5rem)] border-r border-sidebar-border">
           <SidebarContent>
-            <FinancialNav items={navItems} />
+            <FinancialNav items={navItems} hasSelfService={!!session.user.employeeId} />
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border px-4 py-3">
             <p className="text-xs text-subtlest">Current pay period</p>
@@ -101,7 +108,9 @@ export default async function FinancialLayout({ children }: { children: React.Re
         </Sidebar>
 
         <SidebarInset className="min-w-0 bg-background">
-          <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-8 lg:px-10">{children}</div>
+          <FlagProvider>
+            <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-8 lg:px-10">{children}</div>
+          </FlagProvider>
         </SidebarInset>
       </div>
     </SidebarProvider>

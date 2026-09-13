@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut } from 'lucide-react'
+import { LayoutGrid, LogOut } from 'lucide-react'
 import { auth, signOut } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 import { SELF_SERVICE_NAV_ITEMS } from '@/lib/nav-items'
 import { Logo } from '@/lib/brand'
+import { isFinancialRole } from '@/lib/roles'
 import { SelfServiceNav } from '@/components/app/self-service-nav'
 import { button } from '@/components/app/styles'
 
@@ -48,6 +49,12 @@ export default async function SelfServiceLayout({
           </Link>
           <SelfServiceNav items={SELF_SERVICE_NAV_ITEMS} className="hidden h-14 md:flex" />
           <div className="ml-auto flex items-center gap-2">
+            {isFinancialRole(session.user.role) && (
+              <Link href="/portal/financial" className={`${button.subtle} hidden sm:inline-flex`}>
+                <LayoutGrid className="size-4" />
+                Payroll workspace
+              </Link>
+            )}
             <span className="hidden text-sm font-medium sm:inline">{fullName}</span>
             <span aria-hidden className="flex size-8 items-center justify-center rounded-full bg-brand-deep text-xs font-semibold text-white">
               {initials}

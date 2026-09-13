@@ -17,6 +17,13 @@ const STATUS: Record<string, { label: string; appearance: Appearance }> = {
   INACTIVE: { label: 'Inactive', appearance: 'default' },
   SUSPENDED: { label: 'Suspended', appearance: 'moved' },
   TERMINATED: { label: 'Terminated', appearance: 'removed' },
+  // Access
+  INVITED: { label: 'Invited', appearance: 'inprogress' },
+  DEACTIVATED: { label: 'Deactivated', appearance: 'removed' },
+  NO_ACCESS: { label: 'No access', appearance: 'default' },
+  SIGNED_IN: { label: 'Signed in', appearance: 'success' },
+  AVAILABLE: { label: 'Available', appearance: 'inprogress' },
+  BLOCKED: { label: 'Blocked', appearance: 'removed' },
   // Payroll runs
   DRAFT: { label: 'Draft', appearance: 'default' },
   SUBMITTED: { label: 'In review', appearance: 'moved' },
