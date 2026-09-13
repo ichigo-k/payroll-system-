@@ -1,14 +1,9 @@
+import { CircleAlert, Pencil, UserX } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CircleAlert, Pencil, UserX } from 'lucide-react'
-import { can, requirePermission } from '@/lib/access'
-import { parsePage } from '@/lib/pagination'
-import { formatCurrency } from '@/lib/payroll'
-import { periodLabel } from '@/lib/payroll-runs'
-import { prisma } from '@/lib/prisma'
-import { ROLE_INFO } from '@/lib/roles'
-import { selfServiceState } from '@/lib/user-rules'
+import { BankLogo } from '@/components/app/bank-combobox'
+import { CountryFlag } from '@/components/app/country-combobox'
 import { HistoryList } from '@/components/app/history-list'
 import { ListTabs, queryHref } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
@@ -16,12 +11,17 @@ import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button } from '@/components/app/styles'
-import { EmployeeAccessActions } from '../access-actions'
-import { BankLogo } from '@/components/app/bank-combobox'
-import { CountryFlag } from '@/components/app/country-combobox'
+import { can, requirePermission } from '@/lib/access'
 import { countryName } from '@/lib/countries'
-import { ageOn, genderLabel, nearRetirement, yearsOfService } from '@/lib/people'
+import { parsePage } from '@/lib/pagination'
 import { payItemName } from '@/lib/pay-items'
+import { formatCurrency } from '@/lib/payroll'
+import { periodLabel } from '@/lib/payroll-runs'
+import { ageOn, genderLabel, nearRetirement, yearsOfService } from '@/lib/people'
+import { prisma } from '@/lib/prisma'
+import { ROLE_INFO } from '@/lib/roles'
+import { selfServiceState } from '@/lib/user-rules'
+import { EmployeeAccessActions } from '../access-actions'
 import { EmployeeRowActions } from '../employee-row-actions'
 import { LetterButton } from './letter-button'
 import { PayPanel } from './pay-panel'
@@ -57,7 +57,11 @@ export default async function EmployeePage({ params, searchParams }: { params: P
   const terminated = employee.employmentStatus === 'TERMINATED'
   const hasPay = employee.salaryConfigs.length > 0
   const offboarding = terminated
-    ? await prisma.auditLog.findFirst({ where: { entityType: 'Employee', entityId: employee.id, changes: { contains: '"offboarded":true' } }, orderBy: { timestamp: 'desc' }, select: { changes: true } })
+    ? await prisma.auditLog.findFirst({
+        where: { entityType: 'Employee', entityId: employee.id, changes: { contains: '"offboarded":true' } },
+        orderBy: { timestamp: 'desc' },
+        select: { changes: true },
+      })
     : null
   const offboardingReason = (() => {
     try {
@@ -152,7 +156,14 @@ export default async function EmployeePage({ params, searchParams }: { params: P
             {
               title: 'Personal',
               rows: [
-                ['Date of birth', employee.dateOfBirth ? (canEditEmployee ? `${date(employee.dateOfBirth)} (${ageOn(employee.dateOfBirth)} years)` : `${ageOn(employee.dateOfBirth)} years old`) : 'Missing'],
+                [
+                  'Date of birth',
+                  employee.dateOfBirth
+                    ? canEditEmployee
+                      ? `${date(employee.dateOfBirth)} (${ageOn(employee.dateOfBirth)} years)`
+                      : `${ageOn(employee.dateOfBirth)} years old`
+                    : 'Missing',
+                ],
                 ['Gender', genderLabel(employee.gender) || '-'],
                 ['Nationality', employee.nationality ? countryName(employee.nationality) : '-'],
               ],
@@ -171,7 +182,10 @@ export default async function EmployeePage({ params, searchParams }: { params: P
                 ['Employee ID', employee.employeeId],
                 ['Department', employee.department],
                 ['Job title', employee.designation ?? '-'],
-                ['Start date', `${date(employee.startDate)} (${yearsOfService(employee.startDate, employee.endDate)} ${yearsOfService(employee.startDate, employee.endDate) === 1 ? 'year' : 'years'} of service)`],
+                [
+                  'Start date',
+                  `${date(employee.startDate)} (${yearsOfService(employee.startDate, employee.endDate)} ${yearsOfService(employee.startDate, employee.endDate) === 1 ? 'year' : 'years'} of service)`,
+                ],
                 ['End date', date(employee.endDate)],
               ],
             },
@@ -215,7 +229,8 @@ export default async function EmployeePage({ params, searchParams }: { params: P
                         </span>
                       ) : label === 'Date of birth' && employee.dateOfBirth && nearRetirement(employee.dateOfBirth) ? (
                         <span>
-                          {value} <span className="ml-1 inline-flex h-5 items-center rounded-[3px] bg-warning-soft px-1.5 text-[11px] font-semibold text-warning">Retirement age</span>
+                          {value}{' '}
+                          <span className="ml-1 inline-flex h-5 items-center rounded-[3px] bg-warning-soft px-1.5 text-[11px] font-semibold text-warning">Retirement age</span>
                         </span>
                       ) : label === 'Bank' && employee.bankName ? (
                         <span className="flex items-center gap-2">
@@ -240,7 +255,19 @@ export default async function EmployeePage({ params, searchParams }: { params: P
   )
 }
 
-async function PayTab({ employeeId, canEdit, terminated, base, raw }: { employeeId: string; canEdit: boolean; terminated: boolean; base: string; raw: Record<string, string | string[] | undefined> }) {
+async function PayTab({
+  employeeId,
+  canEdit,
+  terminated,
+  base,
+  raw,
+}: {
+  employeeId: string
+  canEdit: boolean
+  terminated: boolean
+  base: string
+  raw: Record<string, string | string[] | undefined>
+}) {
   const edit = ['salary', 'allowance', 'deduction'].includes(String(raw.edit)) ? (raw.edit as 'salary' | 'allowance' | 'deduction') : undefined
   const { page, pageSize, skip, take } = parsePage(raw, 10)
   const [statutory, salaries, allowances, deductions, lines, totalLines] = await Promise.all([
@@ -248,7 +275,13 @@ async function PayTab({ employeeId, canEdit, terminated, base, raw }: { employee
     prisma.salaryConfiguration.findMany({ where: { employeeId }, orderBy: { effectiveFrom: 'desc' } }),
     prisma.allowance.findMany({ where: { employeeId, isActive: true }, orderBy: { createdAt: 'asc' } }),
     prisma.deduction.findMany({ where: { employeeId, isActive: true }, orderBy: { createdAt: 'asc' } }),
-    prisma.payrollDetail.findMany({ where: { employeeId }, include: { payrollRun: { select: { id: true, month: true, year: true, status: true } } }, orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }], skip, take }),
+    prisma.payrollDetail.findMany({
+      where: { employeeId },
+      include: { payrollRun: { select: { id: true, month: true, year: true, status: true } } },
+      orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }],
+      skip,
+      take,
+    }),
     prisma.payrollDetail.count({ where: { employeeId } }),
   ])
 
@@ -261,7 +294,13 @@ async function PayTab({ employeeId, canEdit, terminated, base, raw }: { employee
         initialDialog={edit}
         data={{
           statutory: { ssnitNumber: statutory?.ssnit_number ?? null, tin: statutory?.tin ?? null },
-          salaries: salaries.map((s) => ({ id: s.id, amount: Number(s.baseSalary), from: s.effectiveFrom.toISOString(), to: s.effectiveTo?.toISOString() ?? null, reason: s.reason })),
+          salaries: salaries.map((s) => ({
+            id: s.id,
+            amount: Number(s.baseSalary),
+            from: s.effectiveFrom.toISOString(),
+            to: s.effectiveTo?.toISOString() ?? null,
+            reason: s.reason,
+          })),
           allowances: allowances.map((a) => ({ id: a.id, name: payItemName(a, 'allowance'), amount: Number(a.amount), frequency: a.frequency })),
           deductions: deductions.map((d) => ({
             id: d.id,
@@ -285,12 +324,24 @@ async function PayTab({ employeeId, canEdit, terminated, base, raw }: { employee
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                    <th scope="col" className="py-2 pr-4 font-semibold">Period</th>
-                    <th scope="col" className="px-4 py-2 font-semibold">Run status</th>
-                    <th scope="col" className="px-4 py-2 text-right font-semibold">Gross</th>
-                    <th scope="col" className="px-4 py-2 text-right font-semibold">PAYE</th>
-                    <th scope="col" className="px-4 py-2 text-right font-semibold">SSNIT</th>
-                    <th scope="col" className="py-2 pl-4 text-right font-semibold">Net pay</th>
+                    <th scope="col" className="py-2 pr-4 font-semibold">
+                      Period
+                    </th>
+                    <th scope="col" className="px-4 py-2 font-semibold">
+                      Run status
+                    </th>
+                    <th scope="col" className="px-4 py-2 text-right font-semibold">
+                      Gross
+                    </th>
+                    <th scope="col" className="px-4 py-2 text-right font-semibold">
+                      PAYE
+                    </th>
+                    <th scope="col" className="px-4 py-2 text-right font-semibold">
+                      SSNIT
+                    </th>
+                    <th scope="col" className="py-2 pl-4 text-right font-semibold">
+                      Net pay
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { ArrowLeft, Construction } from 'lucide-react'
+import Link from 'next/link'
 import { button } from './styles'
 
 export function NotBuilt({ homeHref }: { homeHref: string }) {
@@ -12,10 +12,7 @@ export function NotBuilt({ homeHref }: { homeHref: string }) {
       <p className="mt-2 text-sm text-muted-foreground">
         The link exists in navigation, but this part of the workspace hasn&apos;t been built. If you followed a saved link, the page may have moved.
       </p>
-      <Link
-        href={homeHref}
-        className={`${button.default} mt-6`}
-      >
+      <Link href={homeHref} className={`${button.default} mt-6`}>
         <ArrowLeft className="size-4" />
         Back to home
       </Link>

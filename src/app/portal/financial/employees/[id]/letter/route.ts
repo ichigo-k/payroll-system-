@@ -56,8 +56,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }),
   )
 
-  await prisma.report.create({ data: { type: 'CONFIRMATION_LETTER', title: `Employment confirmation for ${name}`, description: withSalary ? 'Includes salary' : null, fileFormat: 'PDF', fileSize: BigInt(pdf.length), generatedById: actor.id } })
-  await audit({ userId: actor.id, action: 'DOWNLOAD', entityType: 'Employee', entityId: employee.id, changes: { document: 'Employment confirmation letter', includesSalary: withSalary, addressedTo: query.get('to') || 'To whom it may concern' } })
+  await prisma.report.create({
+    data: {
+      type: 'CONFIRMATION_LETTER',
+      title: `Employment confirmation for ${name}`,
+      description: withSalary ? 'Includes salary' : null,
+      fileFormat: 'PDF',
+      fileSize: BigInt(pdf.length),
+      generatedById: actor.id,
+    },
+  })
+  await audit({
+    userId: actor.id,
+    action: 'DOWNLOAD',
+    entityType: 'Employee',
+    entityId: employee.id,
+    changes: { document: 'Employment confirmation letter', includesSalary: withSalary, addressedTo: query.get('to') || 'To whom it may concern' },
+  })
 
   const filename = `employment-confirmation-${employee.employeeId}-${now.toISOString().slice(0, 10)}.pdf`
   return new Response(new Uint8Array(pdf), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${filename}"`, 'Cache-Control': 'no-store' } })

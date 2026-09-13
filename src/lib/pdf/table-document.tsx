@@ -40,7 +40,10 @@ export function TableDocument({
     value: (row) => cell(row[c.key], c.kind),
   }))
   // "Total" goes in the widest text column so it never wraps in a narrow one like TIN
-  const labelIndex = columns.reduce((best, c, i) => (c.kind !== 'money' && c.kind !== 'number' && weights[i] > (weights[best] ?? -1) && totals?.[c.key] === undefined ? i : best), 0)
+  const labelIndex = columns.reduce(
+    (best, c, i) => (c.kind !== 'money' && c.kind !== 'number' && weights[i] > (weights[best] ?? -1) && totals?.[c.key] === undefined ? i : best),
+    0,
+  )
   const orientation = columns.length > 7 || totalWeight > 120 ? 'landscape' : 'portrait'
 
   return (
@@ -57,7 +60,11 @@ export function TableDocument({
         {rows.length === 0 ? (
           <Text style={styles.note}>No records match these filters.</Text>
         ) : (
-          <Table columns={pdfColumns} rows={rows} total={totals ? columns.map((c, i) => (i === labelIndex ? 'Total' : totals[c.key] === undefined ? '' : cell(totals[c.key], c.kind))) : undefined} />
+          <Table
+            columns={pdfColumns}
+            rows={rows}
+            total={totals ? columns.map((c, i) => (i === labelIndex ? 'Total' : totals[c.key] === undefined ? '' : cell(totals[c.key], c.kind))) : undefined}
+          />
         )}
       </DocPage>
     </Doc>

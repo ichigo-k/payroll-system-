@@ -1,16 +1,16 @@
-import { createElement, type ReactElement } from 'react'
 import type { Prisma } from '@prisma/client'
+import { createElement, type ReactElement } from 'react'
 import { countryName } from '@/lib/countries'
 import { formatMoney } from '@/lib/currency'
 import { formatPercentChange, salaryChangePercent } from '@/lib/pay-items'
 import { periodLabel } from '@/lib/payroll-runs'
-import { ageOn, genderLabel, yearsOfService } from '@/lib/people'
-import type { Permission } from '@/lib/permissions'
 import type { RunInfo } from '@/lib/pdf/run-documents'
 import { PayslipBundleDocument } from '@/lib/pdf/run-documents'
 import type { TableColumn, TableRow } from '@/lib/pdf/table-document'
 import type { Meta } from '@/lib/pdf/theme'
 import { TaxCertificatesDocument } from '@/lib/pdf/year-documents'
+import { ageOn, genderLabel, yearsOfService } from '@/lib/people'
+import type { Permission } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { toRunLine } from '@/lib/run-document-data'
 import { type ExportFilters, employeeWhere, periodRange, runPeriodWhere } from './filters'
@@ -73,7 +73,15 @@ const employees: TableReport = {
     const list = await prisma.employee.findMany({
       where: employeeWhere(ctx.filters, { canSeePay: ctx.canSeePay, now: ctx.now }),
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-      include: ctx.canSeePay ? { salaryConfigs: { where: { effectiveFrom: { lte: ctx.now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: ctx.now } }] }, take: 1, orderBy: { effectiveFrom: 'desc' } } } : undefined,
+      include: ctx.canSeePay
+        ? {
+            salaryConfigs: {
+              where: { effectiveFrom: { lte: ctx.now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: ctx.now } }] },
+              take: 1,
+              orderBy: { effectiveFrom: 'desc' },
+            },
+          }
+        : undefined,
     })
     const columns: TableColumn[] = [
       { key: 'id', label: 'Employee ID' },
@@ -195,7 +203,8 @@ const earnings: TableReport = {
     for (const line of lines) byEmployee.set(line.employeeId, [...(byEmployee.get(line.employeeId) ?? []), line])
     const rows = [...byEmployee.values()].map((group) => {
       const first = group[0]
-      const n = (key: 'baseSalary' | 'allowancesTotal' | 'grossIncome' | 'ssnitEmployee' | 'ssnitEmployer' | 'paye' | 'deductionsTotal' | 'netPay') => sumBy(group, (l) => Number(l[key]))
+      const n = (key: 'baseSalary' | 'allowancesTotal' | 'grossIncome' | 'ssnitEmployee' | 'ssnitEmployer' | 'paye' | 'deductionsTotal' | 'netPay') =>
+        sumBy(group, (l) => Number(l[key]))
       return {
         id: first.employeeCode,
         name: first.employeeName,
@@ -228,7 +237,16 @@ const earnings: TableReport = {
         { key: 'net', label: 'Net pay', kind: 'money' },
       ],
       rows,
-      totals: { basic: total('basic'), allowances: total('allowances'), gross: total('gross'), ssnitEmployee: total('ssnitEmployee'), ssnitEmployer: total('ssnitEmployer'), paye: total('paye'), deductions: total('deductions'), net: total('net') },
+      totals: {
+        basic: total('basic'),
+        allowances: total('allowances'),
+        gross: total('gross'),
+        ssnitEmployee: total('ssnitEmployee'),
+        ssnitEmployer: total('ssnitEmployer'),
+        paye: total('paye'),
+        deductions: total('deductions'),
+        net: total('net'),
+      },
       summary: [
         ['Employees', String(rows.length)],
         ['Gross pay', formatMoney(total('gross'))],
@@ -280,7 +298,13 @@ const payHistory: TableReport = {
         { key: 'net', label: 'Net pay', kind: 'money' },
       ],
       rows,
-      totals: { gross: sumBy(rows, (r) => r.gross), ssnit: sumBy(rows, (r) => r.ssnit), paye: sumBy(rows, (r) => r.paye), deductions: sumBy(rows, (r) => r.deductions), net: sumBy(rows, (r) => r.net) },
+      totals: {
+        gross: sumBy(rows, (r) => r.gross),
+        ssnit: sumBy(rows, (r) => r.ssnit),
+        paye: sumBy(rows, (r) => r.paye),
+        deductions: sumBy(rows, (r) => r.deductions),
+        net: sumBy(rows, (r) => r.net),
+      },
       summary: [
         ['Payroll lines', String(rows.length)],
         ['Pay periods', String(new Set(rows.map((r) => r.period)).size)],
@@ -306,7 +330,17 @@ const salaryChanges: TableReport = {
     const end = new Date(Date.UTC(to.year, to.month, 0, 23, 59, 59))
     const configs = await prisma.salaryConfiguration.findMany({
       where: { effectiveFrom: { gte: start, lte: end }, employee: employeeWhere(ctx.filters, { canSeePay: ctx.canSeePay, now: ctx.now }) },
-      include: { employee: { select: { employeeId: true, firstName: true, lastName: true, department: true, salaryConfigs: { select: { effectiveFrom: true, baseSalary: true }, orderBy: { effectiveFrom: 'asc' } } } } },
+      include: {
+        employee: {
+          select: {
+            employeeId: true,
+            firstName: true,
+            lastName: true,
+            department: true,
+            salaryConfigs: { select: { effectiveFrom: true, baseSalary: true }, orderBy: { effectiveFrom: 'asc' } },
+          },
+        },
+      },
       orderBy: { effectiveFrom: 'asc' },
     })
     const rows = configs.map((c) => {
@@ -357,7 +391,11 @@ const payeAnnual: TableReport = {
   usesYear: true,
   formats: ['xlsx', 'csv', 'pdf'],
   async build(ctx) {
-    const lines = await prisma.payrollDetail.findMany({ where: linesWhere(ctx, yearWhere(ctx)), include: { payrollRun: { select: { month: true } } }, orderBy: { employeeName: 'asc' } })
+    const lines = await prisma.payrollDetail.findMany({
+      where: linesWhere(ctx, yearWhere(ctx)),
+      include: { payrollRun: { select: { month: true } } },
+      orderBy: { employeeName: 'asc' },
+    })
     const byEmployee = new Map<string, typeof lines>()
     for (const line of lines) byEmployee.set(line.employeeId, [...(byEmployee.get(line.employeeId) ?? []), line])
     const months = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -373,7 +411,11 @@ const payeAnnual: TableReport = {
         chargeable: sumBy(group, (l) => Number(l.taxableIncome)),
         paye: sumBy(group, (l) => Number(l.paye)),
       }
-      for (const m of months) row[monthKey(m)] = sumBy(group.filter((l) => l.payrollRun.month === m), (l) => Number(l.paye))
+      for (const m of months)
+        row[monthKey(m)] = sumBy(
+          group.filter((l) => l.payrollRun.month === m),
+          (l) => Number(l.paye),
+        )
       return row
     })
     const totals: TableRow = {}
@@ -442,7 +484,18 @@ const payslips: DocumentReport = {
       orderBy: [{ employeeName: 'asc' }, { payrollRun: { year: 'asc' } }, { payrollRun: { month: 'asc' } }],
     })
     const entries = lines.map((l) => {
-      const run: RunInfo = { period: periodLabel(l.payrollRun.month, l.payrollRun.year), month: l.payrollRun.month, year: l.payrollRun.year, status: l.payrollRun.status, notes: null, createdBy: null, submittedBy: null, submittedAt: null, approvals: [], paidAt: l.payrollRun.paidAt }
+      const run: RunInfo = {
+        period: periodLabel(l.payrollRun.month, l.payrollRun.year),
+        month: l.payrollRun.month,
+        year: l.payrollRun.year,
+        status: l.payrollRun.status,
+        notes: null,
+        createdBy: null,
+        submittedBy: null,
+        submittedAt: null,
+        approvals: [],
+        paidAt: l.payrollRun.paidAt,
+      }
       return { run, line: toRunLine(l) }
     })
     return createElement(PayslipBundleDocument, { meta, title: 'Payslips', entries })
@@ -450,7 +503,11 @@ const payslips: DocumentReport = {
 }
 
 async function certificateData(ctx: ReportContext) {
-  const lines = await prisma.payrollDetail.findMany({ where: linesWhere(ctx, yearWhere(ctx)), include: { payrollRun: { select: { month: true } } }, orderBy: [{ employeeName: 'asc' }] })
+  const lines = await prisma.payrollDetail.findMany({
+    where: linesWhere(ctx, yearWhere(ctx)),
+    include: { payrollRun: { select: { month: true } } },
+    orderBy: [{ employeeName: 'asc' }],
+  })
   const byEmployee = new Map<string, typeof lines>()
   for (const line of lines) byEmployee.set(line.employeeId, [...(byEmployee.get(line.employeeId) ?? []), line])
   return [...byEmployee.values()].map((group) => {
@@ -462,7 +519,13 @@ async function certificateData(ctx: ReportContext) {
       tin: latest.tin,
       ssnitNumber: latest.ssnitNumber,
       months: group
-        .map((l) => ({ month: l.payrollRun.month, grossIncome: Number(l.grossIncome), ssnitEmployee: Number(l.ssnitEmployee), taxableIncome: Number(l.taxableIncome), paye: Number(l.paye) }))
+        .map((l) => ({
+          month: l.payrollRun.month,
+          grossIncome: Number(l.grossIncome),
+          ssnitEmployee: Number(l.ssnitEmployee),
+          taxableIncome: Number(l.taxableIncome),
+          paye: Number(l.paye),
+        }))
         .sort((a, b) => a.month - b.month),
     }
   })
@@ -488,7 +551,13 @@ const taxCertificates: DocumentReport = {
         { key: 'gross', label: 'Gross income', kind: 'money' },
         { key: 'paye', label: 'PAYE', kind: 'money' },
       ],
-      rows: data.map((e) => ({ id: e.employeeCode, name: e.employeeName, months: e.months.length, gross: sumBy(e.months, (m) => m.grossIncome), paye: sumBy(e.months, (m) => m.paye) })),
+      rows: data.map((e) => ({
+        id: e.employeeCode,
+        name: e.employeeName,
+        months: e.months.length,
+        gross: sumBy(e.months, (m) => m.grossIncome),
+        paye: sumBy(e.months, (m) => m.paye),
+      })),
       summary: [['Certificates', String(data.length)]],
     }
   },

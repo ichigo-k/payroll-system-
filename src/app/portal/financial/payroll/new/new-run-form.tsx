@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { CircleAlert } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CircleAlert } from 'lucide-react'
+import { useState, useTransition } from 'react'
 import { useFlags } from '@/components/app/flags'
-import { button, field } from '@/components/app/styles'
-import { createRunAction } from '../actions'
 import { Select } from '@/components/app/select'
+import { button, field } from '@/components/app/styles'
 import { safeAction } from '@/lib/safe-action'
+import { createRunAction } from '../actions'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }))
 
@@ -67,7 +67,14 @@ export function NewRunForm({ defaultYear, defaultMonth, takenPeriods }: { defaul
         </div>
         <label className="grid max-w-xl gap-1">
           <span className="sr-only">Notes</span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={1000} placeholder="For example: includes the September bonus for the sales team" className={`${field} h-auto py-2`} />
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            maxLength={1000}
+            placeholder="For example: includes the September bonus for the sales team"
+            className={`${field} h-auto py-2`}
+          />
         </label>
       </section>
 

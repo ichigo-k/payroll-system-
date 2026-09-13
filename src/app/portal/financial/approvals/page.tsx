@@ -1,16 +1,16 @@
+import { CircleCheck } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CircleCheck } from 'lucide-react'
-import { requirePermission } from '@/lib/access'
-import { actorName } from '@/lib/audit-format'
-import { formatCurrency } from '@/lib/payroll'
-import { periodLabel } from '@/lib/payroll-runs'
-import { prisma } from '@/lib/prisma'
-import { markChecklistVisit } from '@/lib/checklists'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button } from '@/components/app/styles'
+import { requirePermission } from '@/lib/access'
+import { actorName } from '@/lib/audit-format'
+import { markChecklistVisit } from '@/lib/checklists'
+import { formatCurrency } from '@/lib/payroll'
+import { periodLabel } from '@/lib/payroll-runs'
+import { prisma } from '@/lib/prisma'
 
 export const metadata: Metadata = { title: 'Approval queue' }
 
@@ -40,7 +40,14 @@ export default async function ApprovalsPage() {
     runs.map(async (run) => {
       const round = run.decisions.filter((d) => d.round === run.submissionRound && d.decision === 'APPROVED')
       const flagged = await prisma.payrollDetail.count({ where: { payrollRunId: run.id, NOT: { flags: '[]' } } })
-      const yours = run.submittedById === actor.id ? 'You submitted it' : round.some((d) => d.userId === actor.id) ? 'You approved' : run.requestedReviewerId === actor.id ? 'Review requested from you' : 'Needs your review'
+      const yours =
+        run.submittedById === actor.id
+          ? 'You submitted it'
+          : round.some((d) => d.userId === actor.id)
+            ? 'You approved'
+            : run.requestedReviewerId === actor.id
+              ? 'Review requested from you'
+              : 'Needs your review'
       return { run, approvals: round.length, flagged, yours }
     }),
   )
@@ -75,12 +82,24 @@ export default async function ApprovalsPage() {
           <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                <th scope="col" className="py-2 pr-4 font-semibold">Period</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Submitted</th>
-                <th scope="col" className="px-4 py-2 text-right font-semibold">Net pay</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Approvals</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Flags</th>
-                <th scope="col" className="py-2 pl-4 font-semibold">You</th>
+                <th scope="col" className="py-2 pr-4 font-semibold">
+                  Period
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Submitted
+                </th>
+                <th scope="col" className="px-4 py-2 text-right font-semibold">
+                  Net pay
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Approvals
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Flags
+                </th>
+                <th scope="col" className="py-2 pl-4 font-semibold">
+                  You
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -104,7 +123,13 @@ export default async function ApprovalsPage() {
                     {approvals} of {required}
                   </td>
                   <td className="px-4 py-3">{flagged > 0 ? <span className="text-warning">{flagged} lines</span> : <span className="text-subtlest">None</span>}</td>
-                  <td className="py-3 pl-4">{yours === 'Needs your review' || yours === 'Review requested from you' ? <StatusBadge status="SUBMITTED" /> : <span className="text-muted-foreground">{yours}</span>}</td>
+                  <td className="py-3 pl-4">
+                    {yours === 'Needs your review' || yours === 'Review requested from you' ? (
+                      <StatusBadge status="SUBMITTED" />
+                    ) : (
+                      <span className="text-muted-foreground">{yours}</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -1,17 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { ArrowLeft, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Mail } from 'lucide-react'
+import { AuthCard, AuthNotice, AuthShell } from '@/components/app/auth-shell'
+import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
-import { Button } from '@/components/ui/button'
-import { AuthCard, AuthNotice, AuthShell } from '@/components/app/auth-shell'
 
 const schema = z.object({
   otp: z.string().length(6, 'Please enter the 6-digit code.'),
@@ -54,7 +54,7 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
     }
 
     const sessionResponse = await fetch('/api/auth/session')
-    const session = await sessionResponse.json() as { user?: { role?: string } }
+    const session = (await sessionResponse.json()) as { user?: { role?: string } }
     const role = session?.user?.role
 
     const financialRoles = ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR']
@@ -76,7 +76,7 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      const data = await response.json() as { message: string }
+      const data = (await response.json()) as { message: string }
       setResendMessage(data.message)
       form.reset()
     } catch {
@@ -94,9 +94,7 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
           <h2 className="mt-4 text-3xl leading-[1.1] font-semibold tracking-tight">Check your inbox</h2>
           <p className="mt-2 text-sm text-white/80">We sent a 6-digit code to</p>
           <p className="mt-0.5 text-sm font-medium break-all">{email}</p>
-          <p className="mt-4 max-w-[36ch] text-xs text-white/80">
-            The code expires in 10 minutes. If it hasn&apos;t arrived within a minute, check your spam folder.
-          </p>
+          <p className="mt-4 max-w-[36ch] text-xs text-white/80">The code expires in 10 minutes. If it hasn&apos;t arrived within a minute, check your spam folder.</p>
         </>
       }
     >

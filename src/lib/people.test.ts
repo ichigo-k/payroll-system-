@@ -40,7 +40,7 @@ describe('countries', () => {
     expect(findCountryCode('gh')).toBe('GH')
     expect(findCountryCode('Ghana')).toBe('GH')
     expect(findCountryCode('Ghanaian')).toBe('GH')
-    expect(findCountryCode("Côte d’Ivoire")).toBe('CI')
+    expect(findCountryCode('Côte d’Ivoire')).toBe('CI')
     expect(findCountryCode('Atlantis')).toBeNull()
   })
 

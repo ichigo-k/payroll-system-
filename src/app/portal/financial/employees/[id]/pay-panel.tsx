@@ -1,11 +1,11 @@
 'use client'
 
-import { formatPercentChange, salaryChangePercent } from '@/lib/pay-items'
 import { Pencil } from 'lucide-react'
 import { button } from '@/components/app/styles'
+import { formatMoney } from '@/lib/currency'
+import { formatPercentChange, salaryChangePercent } from '@/lib/pay-items'
 import { cn } from '@/lib/utils'
 import { AddButton, type PayDialog, PayEditor, type PayItem, RowButtons } from './pay-editor'
-import { formatMoney } from '@/lib/currency'
 
 export type PayData = {
   statutory: { ssnitNumber: string | null; tin: string | null }
@@ -37,7 +37,19 @@ function Empty({ text }: { text: string }) {
   return <p className="max-w-3xl rounded-lg border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">{text}</p>
 }
 
-export function PayPanel({ employeeId, data, canEdit, initialDialog, terminated }: { employeeId: string; data: PayData; canEdit: boolean; initialDialog?: 'salary' | 'allowance' | 'deduction'; terminated: boolean }) {
+export function PayPanel({
+  employeeId,
+  data,
+  canEdit,
+  initialDialog,
+  terminated,
+}: {
+  employeeId: string
+  data: PayData
+  canEdit: boolean
+  initialDialog?: 'salary' | 'allowance' | 'deduction'
+  terminated: boolean
+}) {
   const now = new Date()
   const current = data.salaries.find((s) => new Date(s.from) <= now && (!s.to || new Date(s.to) >= now)) ?? data.salaries.find((s) => !s.to)
   const upcoming = data.salaries.find((s) => new Date(s.from) > now)
@@ -89,11 +101,21 @@ export function PayPanel({ employeeId, data, canEdit, initialDialog, terminated 
             <table className="w-full max-w-3xl min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-4 font-semibold">Monthly basic</th>
-                  <th scope="col" className="px-4 py-2 font-semibold">Change</th>
-                  <th scope="col" className="px-4 py-2 font-semibold">Reason</th>
-                  <th scope="col" className="px-4 py-2 font-semibold">From</th>
-                  <th scope="col" className="py-2 pl-4 font-semibold">To</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    Monthly basic
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-semibold">
+                    Change
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-semibold">
+                    Reason
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-semibold">
+                    From
+                  </th>
+                  <th scope="col" className="py-2 pl-4 font-semibold">
+                    To
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -103,7 +125,9 @@ export function PayPanel({ employeeId, data, canEdit, initialDialog, terminated 
                   return (
                     <tr key={s.id} className="border-b border-border">
                       <td className="num py-2 pr-4 font-medium">{money(s.amount)}</td>
-                      <td className={cn('num px-4 py-2', percent === null ? 'text-subtlest' : percent > 0 ? 'text-success' : percent < 0 ? 'text-danger' : 'text-muted-foreground')}>
+                      <td
+                        className={cn('num px-4 py-2', percent === null ? 'text-subtlest' : percent > 0 ? 'text-success' : percent < 0 ? 'text-danger' : 'text-muted-foreground')}
+                      >
                         {percent === null ? 'First salary' : formatPercentChange(percent)}
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">{s.reason ?? '-'}</td>
@@ -124,7 +148,11 @@ export function PayPanel({ employeeId, data, canEdit, initialDialog, terminated 
           <Section
             key={kind}
             title={kind === 'allowance' ? 'Allowances' : 'Deductions'}
-            description={kind === 'allowance' ? 'Added to gross pay and taxed. Each one is listed by name on the payslip.' : 'Taken from net pay after PAYE and SSNIT, like loan repayments or union dues.'}
+            description={
+              kind === 'allowance'
+                ? 'Added to gross pay and taxed. Each one is listed by name on the payslip.'
+                : 'Taken from net pay after PAYE and SSNIT, like loan repayments or union dues.'
+            }
             action={editable && open && <AddButton label={kind === 'allowance' ? 'Add allowance' : 'Add deduction'} onClick={() => open({ kind })} />}
           >
             {items.length === 0 ? (

@@ -1,26 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { ChartColumn, ChevronDown, ClipboardCheck, ClipboardList, FileDown, House, Percent, Receipt, ScrollText, Settings, UserCog, Users, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { LucideIcon } from 'lucide-react'
-import {
-  ChartColumn,
-  ChevronDown,
-  FileDown,
-  ClipboardCheck,
-  ClipboardList,
-  House,
-  Receipt,
-  Percent,
-  ScrollText,
-  Settings,
-  UserCog,
-  Users,
-  Wallet,
-} from 'lucide-react'
-import type { NavItem } from '@/lib/nav-items'
+import { useState } from 'react'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import type { NavItem } from '@/lib/nav-items'
 import { cn } from '@/lib/utils'
 
 const NAV_ICONS: Record<string, LucideIcon> = {

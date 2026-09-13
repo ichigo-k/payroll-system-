@@ -2,9 +2,9 @@ import { Prisma } from '@prisma/client'
 import { type ActionResult, audit, type UserAccess } from '@/lib/access'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
 import { payItemName } from '@/lib/pay-items'
-import { nearRetirement } from '@/lib/people'
 import { activeInPeriod, calculateLine, monthlyAmount, periodBounds, prorationFactor, type ReviewFlag, reviewFlags } from '@/lib/payroll-engine'
 import { approvalsRemaining, checkDecision, checkEditable, checkMarkPaid, checkRecall, checkSubmit, effectiveTaxConfig, type RunStatus } from '@/lib/payroll-rules'
+import { nearRetirement } from '@/lib/people'
 import { prisma } from '@/lib/prisma'
 import type { TaxBracket } from '@/lib/types'
 
@@ -77,7 +77,8 @@ export async function calculateRun(actor: UserAccess, runId: string, { silent = 
   if (locked) return { ok: false, message: locked }
 
   const tax = await taxConfigFor(run.year, run.month)
-  if (!tax) return { ok: false, message: `No approved tax configuration starts on or before ${periodLabel(run.month, run.year)}. Ask an approver to activate one, then recalculate.` }
+  if (!tax)
+    return { ok: false, message: `No approved tax configuration starts on or before ${periodLabel(run.month, run.year)}. Ask an approver to activate one, then recalculate.` }
   // Tell the preparer when older rules are being carried forward, so they can check they're still current
   const carriedForward = tax.year !== run.year ? ` Using the ${taxConfigLabel(tax)} tax configuration, the latest approved one.` : ''
   const brackets = parseBrackets(tax.payeBrackets)
@@ -136,7 +137,14 @@ export async function calculateRun(actor: UserAccess, runId: string, { silent = 
     })
     const previous = previousByEmployee.get(employee.id)
     const flags: ReviewFlag[] = reviewFlags(
-      { baseSalary: line.baseSalary, netPay: line.netPay, bankName: employee.bankName, accountNumber: employee.accountNumber, ssnitNumber: employee.ssnit_number, tin: employee.tin },
+      {
+        baseSalary: line.baseSalary,
+        netPay: line.netPay,
+        bankName: employee.bankName,
+        accountNumber: employee.accountNumber,
+        ssnitNumber: employee.ssnit_number,
+        tin: employee.tin,
+      },
       previous ? { baseSalary: Number(previous.baseSalary), netPay: Number(previous.netPay), bankName: previous.bankName, accountNumber: previous.accountNumber } : null,
     )
     if (factor < 1) flags.push('PART_MONTH')
@@ -199,7 +207,9 @@ export async function calculateRun(actor: UserAccess, runId: string, { silent = 
     })
   }
   const excludedNote = excluded.size ? ` ${excluded.size} excluded from this run.` : ''
-  const skippedNote = skipped ? ` ${skipped} active ${skipped === 1 ? 'employee has' : 'employees have'} no salary for this period and ${skipped === 1 ? 'was' : 'were'} left out.` : ''
+  const skippedNote = skipped
+    ? ` ${skipped} active ${skipped === 1 ? 'employee has' : 'employees have'} no salary for this period and ${skipped === 1 ? 'was' : 'were'} left out.`
+    : ''
   return { ok: true, message: `Calculated pay for ${totals.headcount} ${totals.headcount === 1 ? 'employee' : 'employees'}.${skippedNote}${excludedNote}${carriedForward}` }
 }
 
@@ -238,7 +248,11 @@ export async function submitRun(actor: UserAccess, runId: string, input: { revie
     ] as [string, string][],
   }
   if (reviewerId) {
-    await notify([reviewerId], { type: 'PAYROLL_REVIEW_REQUESTED', title: `${name(actor)} asked you to review the ${period} payroll`, body: note || 'It’s ready for approval.', href: runHref(run.id) }, email)
+    await notify(
+      [reviewerId],
+      { type: 'PAYROLL_REVIEW_REQUESTED', title: `${name(actor)} asked you to review the ${period} payroll`, body: note || 'It’s ready for approval.', href: runHref(run.id) },
+      email,
+    )
   }
   await notify(
     approvers.filter((id) => id !== reviewerId),
@@ -277,7 +291,9 @@ export async function decideRun(actor: UserAccess, runId: string, decision: 'APP
 
   const [alreadyDecided, ownLine, config] = await Promise.all([
     prisma.payrollDecision.findUnique({ where: { payrollRunId_userId_round: { payrollRunId: run.id, userId: actor.id, round: run.submissionRound } } }),
-    actor.employeeId ? prisma.payrollDetail.findUnique({ where: { payrollRunId_employeeId: { payrollRunId: run.id, employeeId: actor.employeeId } }, select: { flags: true } }) : null,
+    actor.employeeId
+      ? prisma.payrollDetail.findUnique({ where: { payrollRunId_employeeId: { payrollRunId: run.id, employeeId: actor.employeeId } }, select: { flags: true } })
+      : null,
     prisma.systemConfig.findFirst({ where: { isActive: true }, select: { requiredApprovals: true } }),
   ])
   const ownFlags: string[] = ownLine ? JSON.parse(ownLine.flags) : []
@@ -302,15 +318,19 @@ export async function decideRun(actor: UserAccess, runId: string, decision: 'APP
     await audit({ userId: actor.id, action: 'REJECT', entityType: 'PayrollRun', entityId: run.id, changes: { changesRequested: true, round: run.submissionRound, comment } })
     const title = `${name(actor)} sent the ${period} payroll back for changes`
     if (submitter) {
-      await notify([submitter.id], { type: 'PAYROLL_CHANGES_REQUESTED', title, body: comment, href: runHref(run.id) }, {
-        subject: `Changes requested on the ${period} payroll`,
-        heading: 'Your payroll run needs changes',
-        actionLabel: 'See what to change',
-        details: [
-          ['Period', period],
-          ['Reviewed by', name(actor)],
-        ],
-      })
+      await notify(
+        [submitter.id],
+        { type: 'PAYROLL_CHANGES_REQUESTED', title, body: comment, href: runHref(run.id) },
+        {
+          subject: `Changes requested on the ${period} payroll`,
+          heading: 'Your payroll run needs changes',
+          actionLabel: 'See what to change',
+          details: [
+            ['Period', period],
+            ['Reviewed by', name(actor)],
+          ],
+        },
+      )
     }
     await notify(preparers, { type: 'PAYROLL_CHANGES_REQUESTED', title, body: comment, href: runHref(run.id) })
     return { ok: true, message: 'Sent back to the preparer with your comments.' }
@@ -320,7 +340,13 @@ export async function decideRun(actor: UserAccess, runId: string, decision: 'APP
   const remaining = approvalsRemaining(config?.requiredApprovals ?? 1, approvals)
 
   if (remaining > 0) {
-    await audit({ userId: actor.id, action: 'APPROVE', entityType: 'PayrollRun', entityId: run.id, changes: { round: run.submissionRound, approvalsRemaining: remaining, comment: comment || undefined } })
+    await audit({
+      userId: actor.id,
+      action: 'APPROVE',
+      entityType: 'PayrollRun',
+      entityId: run.id,
+      changes: { round: run.submissionRound, approvalsRemaining: remaining, comment: comment || undefined },
+    })
     await notify(await userIdsWithRoles(['APPROVER'], [actor.id]), {
       type: 'PAYROLL_PARTIALLY_APPROVED',
       title: `${name(actor)} approved the ${period} payroll`,
@@ -331,20 +357,35 @@ export async function decideRun(actor: UserAccess, runId: string, decision: 'APP
   }
 
   await prisma.payrollRun.update({ where: { id: run.id }, data: { status: 'APPROVED', approvedById: actor.id, approvedAt: new Date() } })
-  await audit({ userId: actor.id, action: 'APPROVE', entityType: 'PayrollRun', entityId: run.id, changes: { round: run.submissionRound, final: true, comment: comment || undefined } })
+  await audit({
+    userId: actor.id,
+    action: 'APPROVE',
+    entityType: 'PayrollRun',
+    entityId: run.id,
+    changes: { round: run.submissionRound, final: true, comment: comment || undefined },
+  })
   const title = `The ${period} payroll was approved`
   if (submitter) {
-    await notify([submitter.id], { type: 'PAYROLL_APPROVED', title, body: `${name(actor)} approved it. You can export the bank payment file.`, href: runHref(run.id) }, {
-      subject: `${period} payroll approved`,
-      heading: 'Your payroll run was approved',
-      actionLabel: 'Open payroll run',
-      details: [
-        ['Period', period],
-        ['Approved by', name(actor)],
-      ],
-    })
+    await notify(
+      [submitter.id],
+      { type: 'PAYROLL_APPROVED', title, body: `${name(actor)} approved it. You can export the bank payment file.`, href: runHref(run.id) },
+      {
+        subject: `${period} payroll approved`,
+        heading: 'Your payroll run was approved',
+        actionLabel: 'Open payroll run',
+        details: [
+          ['Period', period],
+          ['Approved by', name(actor)],
+        ],
+      },
+    )
   }
-  await notify([...preparers, ...(await userIdsWithRoles(['APPROVER'], [actor.id]))], { type: 'PAYROLL_APPROVED', title, body: `Approved by ${name(actor)}.`, href: runHref(run.id) })
+  await notify([...preparers, ...(await userIdsWithRoles(['APPROVER'], [actor.id]))], {
+    type: 'PAYROLL_APPROVED',
+    title,
+    body: `Approved by ${name(actor)}.`,
+    href: runHref(run.id),
+  })
   return { ok: true, message: 'Payroll approved. Preparers can now export the bank payment file.' }
 }
 
@@ -371,7 +412,12 @@ export async function markRunPaid(actor: UserAccess, runId: string): Promise<Act
     { type: 'PAYSLIP_READY', title: `Your ${period} payslip is ready`, body: 'View or download it in self-service.', href: '/portal/self-service/payslips' },
     { subject: `Your ${period} payslip is ready`, heading: 'Your payslip is ready', actionLabel: 'View payslip' },
   )
-  await notify(await userIdsWithRoles(['PREPARER', 'APPROVER'], [actor.id]), { type: 'PAYROLL_PAID', title: `The ${period} payroll was marked as paid`, body: `Payslips are now visible to employees.`, href: runHref(run.id) })
+  await notify(await userIdsWithRoles(['PREPARER', 'APPROVER'], [actor.id]), {
+    type: 'PAYROLL_PAID',
+    title: `The ${period} payroll was marked as paid`,
+    body: `Payslips are now visible to employees.`,
+    href: runHref(run.id),
+  })
   return { ok: true, message: `Marked as paid. ${employeeUsers.length} ${employeeUsers.length === 1 ? 'employee was' : 'employees were'} notified that payslips are ready.` }
 }
 
@@ -434,7 +480,13 @@ export async function excludeFromRun(actor: UserAccess, runId: string, employeeI
     throw err
   }
   const employeeName = `${employee.firstName} ${employee.lastName}`
-  await audit({ userId: actor.id, action: 'UPDATE', entityType: 'PayrollRun', entityId: run.id, changes: { excluded: { employee: employeeName, employeeId: employee.employeeId }, reason } })
+  await audit({
+    userId: actor.id,
+    action: 'UPDATE',
+    entityType: 'PayrollRun',
+    entityId: run.id,
+    changes: { excluded: { employee: employeeName, employeeId: employee.employeeId }, reason },
+  })
   const recalculated = await calculateRun(actor, run.id, { silent: true })
   return { ok: true, message: `${employeeName} was left out of the ${periodLabel(run.month, run.year)} run.${recalculated.ok ? '' : ` ${recalculated.message}`}` }
 }
@@ -451,7 +503,13 @@ export async function includeInRun(actor: UserAccess, runId: string, employeeId:
 
   await prisma.payrollExclusion.delete({ where: { id: exclusion.id } })
   const employeeName = `${exclusion.employee.firstName} ${exclusion.employee.lastName}`
-  await audit({ userId: actor.id, action: 'UPDATE', entityType: 'PayrollRun', entityId: run.id, changes: { included: { employee: employeeName, employeeId: exclusion.employee.employeeId }, previousReason: exclusion.reason } })
+  await audit({
+    userId: actor.id,
+    action: 'UPDATE',
+    entityType: 'PayrollRun',
+    entityId: run.id,
+    changes: { included: { employee: employeeName, employeeId: exclusion.employee.employeeId }, previousReason: exclusion.reason },
+  })
   const recalculated = await calculateRun(actor, run.id, { silent: true })
   return { ok: true, message: recalculated.ok ? `${employeeName} is back in the run. ${recalculated.message}` : recalculated.message }
 }

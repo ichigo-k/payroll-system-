@@ -88,7 +88,11 @@ export function fieldChanges(changes: Record<string, unknown>): FieldChange[] {
     .filter(([, value]) => value && typeof value === 'object' && 'from' in (value as object) && 'to' in (value as object))
     .map(([key, value]) => {
       const { from, to } = value as { from: unknown; to: unknown }
-      return { field: FIELD_LABELS[key] ?? key, from: from === null || from === undefined || from === '' ? 'empty' : String(from), to: to === null || to === undefined || to === '' ? 'empty' : String(to) }
+      return {
+        field: FIELD_LABELS[key] ?? key,
+        from: from === null || from === undefined || from === '' ? 'empty' : String(from),
+        to: to === null || to === undefined || to === '' ? 'empty' : String(to),
+      }
     })
 }
 

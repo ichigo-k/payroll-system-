@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 import { PAGE_SIZES, pageWindow } from '@/lib/pagination'
 import { cn } from '@/lib/utils'
 
@@ -28,9 +28,7 @@ export function Pagination({
 
   return (
     <nav aria-label="Pagination" className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="num text-sm text-muted-foreground">
-        {total === 0 ? `No ${noun}` : `Showing ${from}-${to} of ${total.toLocaleString('en-GB')} ${noun}`}
-      </p>
+      <p className="num text-sm text-muted-foreground">{total === 0 ? `No ${noun}` : `Showing ${from}-${to} of ${total.toLocaleString('en-GB')} ${noun}`}</p>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 text-sm text-muted-foreground">

@@ -13,7 +13,10 @@ export async function rowsToXlsx(sheets: { name: string; rows: Cell[][] }[]) {
 
   for (const { name, rows } of sheets) {
     const sheet = workbook.addWorksheet(name.slice(0, 31).replace(/[\\/?*[\]:]/g, ' '))
-    const headerIndex = Math.max(0, rows.findIndex((row) => row.length > 3))
+    const headerIndex = Math.max(
+      0,
+      rows.findIndex((row) => row.length > 3),
+    )
     rows.forEach((row, index) => {
       const values = row.map((cell) => (typeof cell === 'string' && index > headerIndex && /^-?\d+(\.\d+)?$/.test(cell) ? Number(cell) : cell))
       const added = sheet.addRow(values)

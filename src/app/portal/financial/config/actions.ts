@@ -57,4 +57,3 @@ export async function saveCompanySettings(_prev: SettingsState, formData: FormDa
   revalidatePath('/', 'layout')
   return { status: 'success', message: 'Company settings saved.' }
 }
-

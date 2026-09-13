@@ -1,13 +1,13 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
+import { revalidatePath } from 'next/cache'
 import { audit, diff, requirePermission } from '@/lib/access'
-import { parseEmployeeCsv } from '@/lib/csv'
 import { findCountryCode } from '@/lib/countries'
+import { parseEmployeeCsv } from '@/lib/csv'
 import { ensureDepartment } from '@/lib/departments'
-import { generateEmployeeIds } from '@/lib/employee-ids'
 import { sendNotificationEmail } from '@/lib/email'
+import { generateEmployeeIds } from '@/lib/employee-ids'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
 import { checkDateOfBirth, parseGender } from '@/lib/people'
 import { prisma } from '@/lib/prisma'
@@ -115,12 +115,19 @@ export async function createEmployee(_prev: ActionState, formData: FormData): Pr
         const [employeeId] = await generateEmployeeIds(1, tx)
         // New departments typed into the picker are saved here, so they're available next time
         const department = await ensureDepartment(data.department, tx)
-        const employee = await tx.employee.create({ data: { ...toRecord(data, department), employeeId, employmentStatus: 'ACTIVE', createdBy: actor.id }, select: { id: true, employeeId: true } })
-        await audit({ userId: actor.id, action: 'CREATE', entityType: 'Employee', entityId: employee.id, changes: { name: `${data.firstName} ${data.lastName}`, employeeId, department } }, tx)
+        const employee = await tx.employee.create({
+          data: { ...toRecord(data, department), employeeId, employmentStatus: 'ACTIVE', createdBy: actor.id },
+          select: { id: true, employeeId: true },
+        })
+        await audit(
+          { userId: actor.id, action: 'CREATE', entityType: 'Employee', entityId: employee.id, changes: { name: `${data.firstName} ${data.lastName}`, employeeId, department } },
+          tx,
+        )
         return employee
       })
     } catch (err) {
-      const clash = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002' && String((err.meta as { target?: unknown } | undefined)?.target ?? '').includes('employeeId')
+      const clash =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002' && String((err.meta as { target?: unknown } | undefined)?.target ?? '').includes('employeeId')
       if (clash && attempt < 2) continue
       const handled = uniqueError(err, data)
       if (handled) return handled
@@ -138,7 +145,11 @@ export async function createEmployee(_prev: ActionState, formData: FormData): Pr
   })
 
   refresh()
-  return { status: 'success', message: `${data.firstName} ${data.lastName} was added as ${created.employeeId}. Payroll preparers have been asked to set up their pay.`, employeeId: created.id }
+  return {
+    status: 'success',
+    message: `${data.firstName} ${data.lastName} was added as ${created.employeeId}. Payroll preparers have been asked to set up their pay.`,
+    employeeId: created.id,
+  }
 }
 
 export async function updateEmployee(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -153,7 +164,8 @@ export async function updateEmployee(_prev: ActionState, formData: FormData): Pr
   // Leaving and returning go through Offboard and Reinstate, which record the date and reason
   if (existing.employmentStatus === 'TERMINATED') data.employmentStatus = 'TERMINATED'
   const fieldErrors = validate(data, { creating: false })
-  if (data.employmentStatus === 'TERMINATED' && existing.employmentStatus !== 'TERMINATED') fieldErrors.employmentStatus = 'To record someone leaving, use Offboard on their profile.'
+  if (data.employmentStatus === 'TERMINATED' && existing.employmentStatus !== 'TERMINATED')
+    fieldErrors.employmentStatus = 'To record someone leaving, use Offboard on their profile.'
   if (Object.keys(fieldErrors).length) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors, values: data }
   const bankFields = ['bankName', 'accountName', 'accountNumber'] as const
   if (actor.employeeId === id && bankFields.some((key) => (existing[key] ?? '') !== data[key])) {
@@ -257,7 +269,13 @@ export async function importEmployees(formData: FormData) {
       })),
     })
     for (const employee of created) {
-      await audit({ userId: actor.id, action: 'CREATE', entityType: 'Employee', entityId: employee.id, changes: { name: `${employee.firstName} ${employee.lastName}`, employeeId: employee.employeeId, source: 'CSV import' } })
+      await audit({
+        userId: actor.id,
+        action: 'CREATE',
+        entityType: 'Employee',
+        entityId: employee.id,
+        changes: { name: `${employee.firstName} ${employee.lastName}`, employeeId: employee.employeeId, source: 'CSV import' },
+      })
     }
     if (created.length) {
       await notify(await userIdsWithRoles(['PREPARER'], [actor.id]), {

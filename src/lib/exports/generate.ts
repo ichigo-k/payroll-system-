@@ -1,11 +1,11 @@
-import { createElement } from 'react'
 import type { ReportType } from '@prisma/client'
-import { type UserAccess, audit, can } from '@/lib/access'
+import { createElement } from 'react'
+import { audit, can, type UserAccess } from '@/lib/access'
 import { actorName } from '@/lib/audit-format'
 import { activeCurrency } from '@/lib/currency'
 import { toCsv } from '@/lib/payroll-exports'
 import { CONTENT_TYPES, renderPdf } from '@/lib/pdf/render'
-import { TableDocument, type TableColumn, type TableRow } from '@/lib/pdf/table-document'
+import { type TableColumn, TableDocument, type TableRow } from '@/lib/pdf/table-document'
 import { prisma } from '@/lib/prisma'
 import { loadCompany } from '@/lib/run-document-data'
 import { rowsToXlsx } from '@/lib/xlsx'
@@ -38,7 +38,8 @@ function tableRows(columns: TableColumn[], rows: TableRow[], totals?: TableRow) 
   const money = (v: unknown) => (typeof v === 'number' ? v.toFixed(2) : v)
   const out: (string | number | null)[][] = [columns.map(headerLabel)]
   for (const row of rows) out.push(columns.map((c) => (c.kind === 'money' ? (money(row[c.key]) as string | null) : (row[c.key] ?? null))))
-  if (totals) out.push(columns.map((c, i) => (i === 0 ? 'TOTAL' : totals[c.key] === undefined ? '' : c.kind === 'money' ? (money(totals[c.key]) as string) : (totals[c.key] ?? ''))))
+  if (totals)
+    out.push(columns.map((c, i) => (i === 0 ? 'TOTAL' : totals[c.key] === undefined ? '' : c.kind === 'money' ? (money(totals[c.key]) as string) : (totals[c.key] ?? ''))))
   return out
 }
 
@@ -58,7 +59,17 @@ export async function generateExport(report: ReportDef, ctx: ReportContext, form
   const table = await report.build(ctx)
   let body: Buffer | string
   if (format === 'pdf') {
-    body = await renderPdf(createElement(TableDocument, { meta: await meta(), title: report.label, filtersText, summary: table.summary, columns: table.columns, rows: table.rows, totals: table.totals }))
+    body = await renderPdf(
+      createElement(TableDocument, {
+        meta: await meta(),
+        title: report.label,
+        filtersText,
+        summary: table.summary,
+        columns: table.columns,
+        rows: table.rows,
+        totals: table.totals,
+      }),
+    )
   } else {
     const rows = tableRows(table.columns, table.rows, table.totals)
     body = format === 'xlsx' ? await rowsToXlsx([{ name: report.label, rows: [[report.label], [filtersText], [], ...rows] }]) : toCsv([[report.label], [filtersText], [], ...rows])
@@ -81,6 +92,12 @@ export async function recordExport(report: ReportDef, ctx: ReportContext, format
       generatedById: actor.id,
     },
   })
-  await audit({ userId: actor.id, action: 'DOWNLOAD', entityType: 'Report', entityId: saved.id, changes: { report: report.label, format: format.toUpperCase(), rows: result.rowCount, filters: filtersToQuery(ctx.filters) || 'none' } })
+  await audit({
+    userId: actor.id,
+    action: 'DOWNLOAD',
+    entityType: 'Report',
+    entityId: saved.id,
+    changes: { report: report.label, format: format.toUpperCase(), rows: result.rowCount, filters: filtersToQuery(ctx.filters) || 'none' },
+  })
   return saved
 }

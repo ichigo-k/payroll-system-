@@ -106,10 +106,7 @@ export async function changeUserRole(actor: UserAccess, userId: string, newRole:
   await audit({ userId: actor.id, action: 'UPDATE', entityType: 'User', entityId: target.id, changes: { role: { from: target.role, to: role } } })
 
   if (target.status === 'active') {
-    await trySend(
-      () => sendRoleChangedEmail({ to: target.email, firstName: target.firstName, from: target.role, toRole: role, changedBy: displayName(actor) }),
-      'role change',
-    )
+    await trySend(() => sendRoleChangedEmail({ to: target.email, firstName: target.firstName, from: target.role, toRole: role, changedBy: displayName(actor) }), 'role change')
   }
   return { ok: true, message: `${displayName(target)} is now ${ROLE_INFO[role].label.toLowerCase()}.` }
 }
@@ -129,10 +126,7 @@ export async function setUserStatus(actor: UserAccess, userId: string, newStatus
   invalidateUserAccess(target.id)
   await audit({ userId: actor.id, action: 'UPDATE', entityType: 'User', entityId: target.id, changes: { status: { from: target.status, to: newStatus } } })
 
-  await trySend(
-    () => sendAccessStatusEmail({ to: target.email, firstName: target.firstName, active: newStatus === 'active', changedBy: displayName(actor) }),
-    'status change',
-  )
+  await trySend(() => sendAccessStatusEmail({ to: target.email, firstName: target.firstName, active: newStatus === 'active', changedBy: displayName(actor) }), 'status change')
   return {
     ok: true,
     message: newStatus === 'active' ? `${displayName(target)} can sign in again.` : `${displayName(target)} has been deactivated and signed out.`,
@@ -191,10 +185,7 @@ export async function sendSelfServiceWelcome(actor: UserAccess, employeeId: stri
   if (employee.user && employee.user.status !== 'active') return { ok: false, message: 'Self-service is blocked for this employee. Unblock them first.' }
   if (employee.employmentStatus === 'TERMINATED') return { ok: false, message: 'Terminated employees can’t sign in to self-service.' }
 
-  const sent = await trySend(
-    () => sendInviteEmail({ to: employee.email, firstName: employee.firstName, role: 'EMPLOYEE', invitedBy: displayName(actor) }),
-    'self-service welcome',
-  )
+  const sent = await trySend(() => sendInviteEmail({ to: employee.email, firstName: employee.firstName, role: 'EMPLOYEE', invitedBy: displayName(actor) }), 'self-service welcome')
   if (!sent) return { ok: false, message: 'The email didn’t send. Check the email settings and try again.' }
   await audit({ userId: actor.id, action: 'UPDATE', entityType: 'Employee', entityId: employee.id, changes: { selfServiceWelcomeSent: true } })
   return { ok: true, message: `Sent sign-in instructions to ${employee.email}.` }
@@ -223,7 +214,13 @@ export async function blockSelfService(actor: UserAccess, employeeId: string): P
     await tx.otpToken.updateMany({ where: { email, consumedAt: null }, data: { consumedAt: new Date() } })
     return created
   })
-  await audit({ userId: actor.id, action: 'UPDATE', entityType: 'User', entityId: user.id, changes: { status: { from: null, to: 'inactive' }, reason: 'Self-service blocked from Employees page' } })
+  await audit({
+    userId: actor.id,
+    action: 'UPDATE',
+    entityType: 'User',
+    entityId: user.id,
+    changes: { status: { from: null, to: 'inactive' }, reason: 'Self-service blocked from Employees page' },
+  })
   return { ok: true, message: `${employee.firstName} ${employee.lastName} can no longer sign in to self-service.` }
 }
 
@@ -256,7 +253,9 @@ export async function grantWorkspaceRole(actor: UserAccess, employeeId: string, 
     if (existing.employee) return { ok: false, message: 'Another employee record already uses this login. Check User management.' }
     const linked = await linkEmployee(actor, existing.id, employee.id)
     if (!linked.ok) return linked
-    return existing.role === role ? { ok: true, message: `${employee.firstName} already had this role. Their login is now linked to their employee record.` } : changeUserRole(actor, existing.id, role)
+    return existing.role === role
+      ? { ok: true, message: `${employee.firstName} already had this role. Their login is now linked to their employee record.` }
+      : changeUserRole(actor, existing.id, role)
   }
 
   // First time: create the login with the role, linked to the record, and send the workspace invite
@@ -265,7 +264,13 @@ export async function grantWorkspaceRole(actor: UserAccess, employeeId: string, 
     await tx.employee.update({ where: { id: employee.id }, data: { userId: user.id } })
     return user
   })
-  await audit({ userId: actor.id, action: 'CREATE', entityType: 'User', entityId: created.id, changes: { role, employeeId: employee.id, reason: 'Workspace access given from Employees page' } })
+  await audit({
+    userId: actor.id,
+    action: 'CREATE',
+    entityType: 'User',
+    entityId: created.id,
+    changes: { role, employeeId: employee.id, reason: 'Workspace access given from Employees page' },
+  })
   const sent = await trySend(() => sendInviteEmail({ to: email, firstName: employee.firstName, role, invitedBy: displayName(actor) }), 'workspace access')
   const who = `${employee.firstName} ${employee.lastName}`
   return sent

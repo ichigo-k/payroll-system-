@@ -1,19 +1,22 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
 import { CircleAlert } from 'lucide-react'
-import { useFlags } from '@/components/app/flags'
-import { button, field } from '@/components/app/styles'
-import { type SettingsState, saveCompanySettings } from './actions'
-import { Select } from '@/components/app/select'
+import { useActionState, useEffect, useRef } from 'react'
 import { CountryFlag } from '@/components/app/country-combobox'
+import { useFlags } from '@/components/app/flags'
+import { Select } from '@/components/app/select'
+import { button, field } from '@/components/app/styles'
 import { CURRENCIES } from '@/lib/currency'
+import { type SettingsState, saveCompanySettings } from './actions'
 
 export type SettingsValues = Record<string, string>
 
 function Section({ id, title, description, children }: { id: string; title: string; description: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="-mx-3 grid scroll-mt-20 gap-4 rounded-lg border-b border-border px-3 py-6 transition-colors duration-500 target:bg-accent lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
+    <section
+      id={id}
+      className="-mx-3 grid scroll-mt-20 gap-4 rounded-lg border-b border-border px-3 py-6 transition-colors duration-500 target:bg-accent lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10"
+    >
       <div>
         <h2 className="text-base font-semibold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
@@ -23,7 +26,23 @@ function Section({ id, title, description, children }: { id: string; title: stri
   )
 }
 
-function Input({ name, label, values, disabled, required, hint, wide }: { name: string; label: string; values: SettingsValues; disabled: boolean; required?: boolean; hint?: string; wide?: boolean }) {
+function Input({
+  name,
+  label,
+  values,
+  disabled,
+  required,
+  hint,
+  wide,
+}: {
+  name: string
+  label: string
+  values: SettingsValues
+  disabled: boolean
+  required?: boolean
+  hint?: string
+  wide?: boolean
+}) {
   return (
     <label className={`grid gap-1 ${wide ? 'sm:col-span-2' : ''}`}>
       <span className="text-xs font-semibold text-muted-foreground">

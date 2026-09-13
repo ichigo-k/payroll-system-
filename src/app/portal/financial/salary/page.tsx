@@ -1,16 +1,16 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
 import type { Prisma } from '@prisma/client'
 import { Search } from 'lucide-react'
-import { can, requirePermission } from '@/lib/access'
-import { parsePage } from '@/lib/pagination'
-import { formatCurrency } from '@/lib/payroll'
-import { prisma } from '@/lib/prisma'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { ListTabs, queryHref } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
 import { button, field } from '@/components/app/styles'
+import { can, requirePermission } from '@/lib/access'
+import { parsePage } from '@/lib/pagination'
+import { formatCurrency } from '@/lib/payroll'
+import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Salaries' }
@@ -35,7 +35,14 @@ export default async function SalariesPage({ searchParams }: { searchParams: Pro
   const current = { view: view === 'all' ? undefined : view, q: q || undefined, size: typeof raw.size === 'string' ? raw.size : undefined }
 
   const search: Prisma.EmployeeWhereInput = q
-    ? { OR: [{ firstName: { contains: q, mode: 'insensitive' } }, { lastName: { contains: q, mode: 'insensitive' } }, { employeeId: { contains: q, mode: 'insensitive' } }, { department: { contains: q, mode: 'insensitive' } }] }
+    ? {
+        OR: [
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { employeeId: { contains: q, mode: 'insensitive' } },
+          { department: { contains: q, mode: 'insensitive' } },
+        ],
+      }
     : {}
   const where = (key: string): Prisma.EmployeeWhereInput => ({ AND: [{ employmentStatus: 'ACTIVE' }, VIEWS[key].where(), search] })
   const keys = Object.keys(VIEWS)
@@ -69,7 +76,16 @@ export default async function SalariesPage({ searchParams }: { searchParams: Pro
         }
       />
 
-      <ListTabs label="Salary views" tabs={keys.map((key, i) => ({ key, label: VIEWS[key].label, count: counts[i], active: key === view, href: queryHref('/portal/financial/salary', current, { view: key === 'all' ? undefined : key }) }))} />
+      <ListTabs
+        label="Salary views"
+        tabs={keys.map((key, i) => ({
+          key,
+          label: VIEWS[key].label,
+          count: counts[i],
+          active: key === view,
+          href: queryHref('/portal/financial/salary', current, { view: key === 'all' ? undefined : key }),
+        }))}
+      />
 
       <form action="/portal/financial/salary" className="flex flex-wrap items-center gap-2 py-4">
         {view !== 'all' && <input type="hidden" name="view" value={view} />}
@@ -88,7 +104,9 @@ export default async function SalariesPage({ searchParams }: { searchParams: Pro
       {employees.length === 0 ? (
         <div className="rounded-lg border border-dashed border-input px-6 py-14 text-center">
           <p className="text-base font-semibold">{view === 'missing' && !q ? 'Everyone has a salary' : 'No employees match'}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{view === 'missing' && !q ? 'All active employees will be included in payroll runs.' : 'Try another view or search.'}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {view === 'missing' && !q ? 'All active employees will be included in payroll runs.' : 'Try another view or search.'}
+          </p>
         </div>
       ) : (
         <>
@@ -96,11 +114,21 @@ export default async function SalariesPage({ searchParams }: { searchParams: Pro
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-4 font-semibold">Employee</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Basic salary</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Allowances / month</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Deductions / month</th>
-                  <th scope="col" className="py-2 pl-4 font-semibold">Since</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    Employee
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Basic salary
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Allowances / month
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Deductions / month
+                  </th>
+                  <th scope="col" className="py-2 pl-4 font-semibold">
+                    Since
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -118,10 +146,14 @@ export default async function SalariesPage({ searchParams }: { searchParams: Pro
                           <span className="font-mono">{e.employeeId}</span> · {e.department}
                         </p>
                       </td>
-                      <td className="num px-4 py-2.5 text-right">{salary ? <span className="font-medium">{formatCurrency(Number(salary.baseSalary))}</span> : <span className="font-medium text-danger">Not set</span>}</td>
+                      <td className="num px-4 py-2.5 text-right">
+                        {salary ? <span className="font-medium">{formatCurrency(Number(salary.baseSalary))}</span> : <span className="font-medium text-danger">Not set</span>}
+                      </td>
                       <td className="num px-4 py-2.5 text-right">{allowances ? formatCurrency(allowances) : <span className="text-subtlest">None</span>}</td>
                       <td className="num px-4 py-2.5 text-right">{deductions ? formatCurrency(deductions) : <span className="text-subtlest">None</span>}</td>
-                      <td className="num py-2.5 pl-4 text-muted-foreground">{salary ? salary.effectiveFrom.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
+                      <td className="num py-2.5 pl-4 text-muted-foreground">
+                        {salary ? salary.effectiveFrom.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </td>
                     </tr>
                   )
                 })}

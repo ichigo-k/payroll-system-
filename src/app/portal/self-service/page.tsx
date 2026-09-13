@@ -1,12 +1,12 @@
+import { ChevronRight, Clock, FileText, History, Receipt, UserRound } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronRight, Clock, FileText, History, Receipt, UserRound } from 'lucide-react'
+import { PageHeader } from '@/components/app/page-header'
+import { button, link } from '@/components/app/styles'
 import { formatCurrency } from '@/lib/payroll'
 import { periodLabel } from '@/lib/payroll-runs'
 import { prisma } from '@/lib/prisma'
 import { PUBLISHED, requireSelfServiceEmployee } from '@/lib/self-service'
-import { PageHeader } from '@/components/app/page-header'
-import { button, link } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'My pay' }
@@ -24,16 +24,35 @@ export default async function SelfServiceHomePage() {
 
   const [latest, ytd, processing] = employee
     ? await Promise.all([
-        prisma.payrollDetail.findFirst({ where: { employeeId: employee.id, ...PUBLISHED }, include: { payrollRun: { select: { month: true, year: true, paidAt: true } } }, orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }] }),
-        prisma.payrollDetail.aggregate({ where: { employeeId: employee.id, payrollRun: { status: 'PAID', year } }, _sum: { grossIncome: true, paye: true, netPay: true, ssnitEmployee: true } }),
+        prisma.payrollDetail.findFirst({
+          where: { employeeId: employee.id, ...PUBLISHED },
+          include: { payrollRun: { select: { month: true, year: true, paidAt: true } } },
+          orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }],
+        }),
+        prisma.payrollDetail.aggregate({
+          where: { employeeId: employee.id, payrollRun: { status: 'PAID', year } },
+          _sum: { grossIncome: true, paye: true, netPay: true, ssnitEmployee: true },
+        }),
         // Approved but not yet paid: amounts stay hidden until payday, but say it's on the way
-        prisma.payrollDetail.findFirst({ where: { employeeId: employee.id, payrollRun: { status: 'APPROVED' } }, select: { payrollRun: { select: { month: true, year: true } } }, orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }] }),
+        prisma.payrollDetail.findFirst({
+          where: { employeeId: employee.id, payrollRun: { status: 'APPROVED' } },
+          select: { payrollRun: { select: { month: true, year: true } } },
+          orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }],
+        }),
       ])
     : [null, null, null]
 
   const stats = [
-    { label: 'Latest net pay', value: latest ? formatCurrency(Number(latest.netPay)) : 'Not available yet', hint: latest ? periodLabel(latest.payrollRun.month, latest.payrollRun.year) : 'Appears after your first paid payroll' },
-    { label: 'Last paid', value: latest?.payrollRun.paidAt ? latest.payrollRun.paidAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-', hint: 'Date payroll was marked paid' },
+    {
+      label: 'Latest net pay',
+      value: latest ? formatCurrency(Number(latest.netPay)) : 'Not available yet',
+      hint: latest ? periodLabel(latest.payrollRun.month, latest.payrollRun.year) : 'Appears after your first paid payroll',
+    },
+    {
+      label: 'Last paid',
+      value: latest?.payrollRun.paidAt ? latest.payrollRun.paidAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
+      hint: 'Date payroll was marked paid',
+    },
     { label: `Gross pay in ${year}`, value: formatCurrency(Number(ytd?._sum.grossIncome ?? 0)), hint: 'Year to date' },
     { label: `PAYE in ${year}`, value: formatCurrency(Number(ytd?._sum.paye ?? 0)), hint: 'Year to date' },
   ]
@@ -56,14 +75,16 @@ export default async function SelfServiceHomePage() {
         <div role="status" className="mb-6 flex items-start gap-3 rounded-lg bg-accent px-4 py-3 text-sm">
           <Clock className="mt-0.5 size-4 shrink-0 text-primary" />
           <p className="text-foreground">
-            <span className="font-semibold">Your {periodLabel(processing.payrollRun.month, processing.payrollRun.year)} pay has been approved.</span> Your payslip will appear here once the payment has been
-            made, and you’ll get a notification.
+            <span className="font-semibold">Your {periodLabel(processing.payrollRun.month, processing.payrollRun.year)} pay has been approved.</span> Your payslip will appear here
+            once the payment has been made, and you’ll get a notification.
           </p>
         </div>
       )}
 
       {!employee && (
-        <p className="mb-6 rounded-lg bg-warning-soft px-4 py-3 text-sm">Your login isn’t linked to an employee record, so there’s no pay to show. Ask your payroll or HR administrator to link it.</p>
+        <p className="mb-6 rounded-lg bg-warning-soft px-4 py-3 text-sm">
+          Your login isn’t linked to an employee record, so there’s no pay to show. Ask your payroll or HR administrator to link it.
+        </p>
       )}
 
       <dl className="grid grid-cols-2 gap-y-5 border-y border-border py-5 lg:grid-cols-4">

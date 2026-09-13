@@ -1,14 +1,14 @@
+import { Clock, Info, Plus, TriangleAlert } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Clock, Info, Plus, TriangleAlert } from 'lucide-react'
-import { can, requirePermission } from '@/lib/access'
-import { actorName } from '@/lib/audit-format'
-import { getGhanaTaxBrackets } from '@/lib/payroll'
-import { prisma } from '@/lib/prisma'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button } from '@/components/app/styles'
+import { can, requirePermission } from '@/lib/access'
+import { actorName } from '@/lib/audit-format'
+import { getGhanaTaxBrackets } from '@/lib/payroll'
+import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 import { TaxForm, type TaxFormValues } from './tax-form'
 import { TaxReview } from './tax-review'
@@ -50,7 +50,9 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
   const selected = isNew ? undefined : (requested ?? configs.find((c) => c.isActive && c.approvedAt) ?? configs[0])
 
   const peopleIds = [selected?.updatedBy, selected?.approvedById, selected?.pendingById].filter((v): v is string => !!v)
-  const people = new Map((await prisma.user.findMany({ where: { id: { in: peopleIds } }, select: { id: true, firstName: true, lastName: true, email: true } })).map((u) => [u.id, actorName(u)]))
+  const people = new Map(
+    (await prisma.user.findMany({ where: { id: { in: peopleIds } }, select: { id: true, firstName: true, lastName: true, email: true } })).map((u) => [u.id, actorName(u)]),
+  )
 
   const pending = selected?.pendingChanges ? (JSON.parse(selected.pendingChanges) as Record<string, string | boolean>) : null
   // Preparers edit the proposal if there is one, otherwise the current values
@@ -96,7 +98,11 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
         )
           .map(([label, key]): { label: string; from: string; to: string } => ({ label, from: Number(selected[key]).toString(), to: Number(pending[key]).toString() }))
           .filter((row) => row.from !== row.to)
-          .concat(JSON.stringify(JSON.parse(selected.payeBrackets)) !== JSON.stringify(JSON.parse(String(pending.payeBrackets))) ? [{ label: 'PAYE bands', from: 'current bands', to: 'new bands' }] : [])
+          .concat(
+            JSON.stringify(JSON.parse(selected.payeBrackets)) !== JSON.stringify(JSON.parse(String(pending.payeBrackets)))
+              ? [{ label: 'PAYE bands', from: 'current bands', to: 'new bands' }]
+              : [],
+          )
           .concat(Boolean(pending.isActive) !== selected.isActive ? [{ label: 'Active', from: selected.isActive ? 'Yes' : 'No', to: pending.isActive ? 'Yes' : 'No' }] : [])
       : []
 
@@ -172,9 +178,15 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
             <table className="mt-3 w-full max-w-lg text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground">
-                  <th scope="col" className="py-1 pr-4 font-semibold">Setting</th>
-                  <th scope="col" className="px-4 py-1 font-semibold">Current</th>
-                  <th scope="col" className="py-1 pl-4 font-semibold">Proposed</th>
+                  <th scope="col" className="py-1 pr-4 font-semibold">
+                    Setting
+                  </th>
+                  <th scope="col" className="px-4 py-1 font-semibold">
+                    Current
+                  </th>
+                  <th scope="col" className="py-1 pl-4 font-semibold">
+                    Proposed
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -194,7 +206,11 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       {!canDraft && (
         <div role="note" className="mb-5 flex items-start gap-2.5 rounded-lg bg-secondary px-4 py-3 text-sm text-foreground">
           <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-          <p>{canActivate ? 'You review and activate tax settings. Payroll preparers draft them.' : 'You can view tax settings. Payroll preparers draft them and approvers activate them.'}</p>
+          <p>
+            {canActivate
+              ? 'You review and activate tax settings. Payroll preparers draft them.'
+              : 'You can view tax settings. Payroll preparers draft them and approvers activate them.'}
+          </p>
         </div>
       )}
 
@@ -209,7 +225,12 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       )}
 
       <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_260px]">
-        <TaxForm key={`${selected?.id ?? 'new'}-${selected?.pendingAt?.getTime() ?? ''}`} values={values} canEdit={canDraft} submitLabel={selected?.approvedAt ? 'Propose changes' : 'Save draft'} />
+        <TaxForm
+          key={`${selected?.id ?? 'new'}-${selected?.pendingAt?.getTime() ?? ''}`}
+          values={values}
+          canEdit={canDraft}
+          submitLabel={selected?.approvedAt ? 'Propose changes' : 'Save draft'}
+        />
 
         {configs.length > 0 && (
           <aside aria-labelledby="saved-configs" className="xl:sticky xl:top-20">
@@ -225,7 +246,10 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
                     <Link
                       href={`/portal/financial/tax?id=${config.id}`}
                       aria-current={current ? 'page' : undefined}
-                      className={cn('flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm transition-colors duration-150', current ? 'bg-accent font-medium text-primary' : 'text-foreground hover:bg-secondary')}
+                      className={cn(
+                        'flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm transition-colors duration-150',
+                        current ? 'bg-accent font-medium text-primary' : 'text-foreground hover:bg-secondary',
+                      )}
                     >
                       <span className="num">{periodName(config.year, config.month)}</span>
                       {s !== 'INACTIVE' && <StatusBadge status={s === 'PENDING' ? 'PENDING_APPROVAL' : s === 'DRAFT' ? 'DRAFT' : 'ACTIVE'} />}

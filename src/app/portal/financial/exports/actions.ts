@@ -1,8 +1,8 @@
 'use server'
 
+import type { ReportType } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
-import type { ReportType } from '@prisma/client'
 import { type ActionResult, audit, can, currentUser } from '@/lib/access'
 import { describeFilters, filtersToQuery, parseFilters } from '@/lib/exports/filters'
 import { contextFor, EXPORT_RETENTION_DAYS, generateExport } from '@/lib/exports/generate'
@@ -40,12 +40,28 @@ export async function prepareExportAction(query: string, rawFormat: string): Pro
       const result = await generateExport(report, ctx, format, actor)
       const content = new Uint8Array(typeof result.body === 'string' ? Buffer.from(result.body) : result.body)
       await prisma.report.update({ where: { id: pending.id }, data: { status: 'READY', content, fileSize: BigInt(content.length), rowCount: result.rowCount } })
-      await audit({ userId: actor.id, action: 'DOWNLOAD', entityType: 'Report', entityId: pending.id, changes: { report: report.label, format: format.toUpperCase(), rows: result.rowCount, background: true } })
-      await notify([actor.id], { type: 'EXPORT_READY', title: `Your ${report.label.toLowerCase()} export is ready`, body: `${result.rowCount} ${report.kind === 'document' ? 'pages' : 'rows'}, ${format.toUpperCase()}. It’s kept for ${EXPORT_RETENTION_DAYS} days.`, href: `${EXPORTS}?tab=history` })
+      await audit({
+        userId: actor.id,
+        action: 'DOWNLOAD',
+        entityType: 'Report',
+        entityId: pending.id,
+        changes: { report: report.label, format: format.toUpperCase(), rows: result.rowCount, background: true },
+      })
+      await notify([actor.id], {
+        type: 'EXPORT_READY',
+        title: `Your ${report.label.toLowerCase()} export is ready`,
+        body: `${result.rowCount} ${report.kind === 'document' ? 'pages' : 'rows'}, ${format.toUpperCase()}. It’s kept for ${EXPORT_RETENTION_DAYS} days.`,
+        href: `${EXPORTS}?tab=history`,
+      })
     } catch (err) {
       console.error('[exports] background export failed:', err)
       await prisma.report.update({ where: { id: pending.id }, data: { status: 'FAILED', error: err instanceof Error ? err.message.slice(0, 500) : 'Export failed' } })
-      await notify([actor.id], { type: 'EXPORT_FAILED', title: `Your ${report.label.toLowerCase()} export failed`, body: 'Try again, or narrow the filters.', href: `${EXPORTS}?tab=history` })
+      await notify([actor.id], {
+        type: 'EXPORT_FAILED',
+        title: `Your ${report.label.toLowerCase()} export failed`,
+        body: 'Try again, or narrow the filters.',
+        href: `${EXPORTS}?tab=history`,
+      })
     }
   })
 

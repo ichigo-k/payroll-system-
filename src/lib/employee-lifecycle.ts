@@ -31,7 +31,10 @@ export async function offboardEmployee(actor: UserAccess, employeeId: string, in
   await prisma.$transaction(async (tx) => {
     await tx.employee.update({ where: { id: employee.id }, data: { employmentStatus: 'TERMINATED', endDate } })
     // Salaries stop on the last working day; later scheduled salaries never start
-    await tx.salaryConfiguration.updateMany({ where: { employeeId: employee.id, effectiveFrom: { lte: endDate }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: endDate } }] }, data: { effectiveTo: endDate } })
+    await tx.salaryConfiguration.updateMany({
+      where: { employeeId: employee.id, effectiveFrom: { lte: endDate }, OR: [{ effectiveTo: null }, { effectiveTo: { gt: endDate } }] },
+      data: { effectiveTo: endDate },
+    })
     await tx.deduction.updateMany({ where: { employeeId: employee.id, isActive: true, OR: [{ endDate: null }, { endDate: { gt: endDate } }] }, data: { endDate } })
     await audit(
       {
@@ -45,7 +48,10 @@ export async function offboardEmployee(actor: UserAccess, employeeId: string, in
     )
     if (workspaceRole && employee.user) {
       await tx.user.update({ where: { id: employee.user.id }, data: { role: 'EMPLOYEE' } })
-      await audit({ userId: actor.id, action: 'UPDATE', entityType: 'User', entityId: employee.user.id, changes: { role: { from: workspaceRole, to: 'EMPLOYEE' }, reason: 'Offboarded' } }, tx)
+      await audit(
+        { userId: actor.id, action: 'UPDATE', entityType: 'User', entityId: employee.user.id, changes: { role: { from: workspaceRole, to: 'EMPLOYEE' }, reason: 'Offboarded' } },
+        tx,
+      )
     }
   })
   if (employee.user) invalidateUserAccess(employee.user.id)
@@ -80,7 +86,12 @@ export async function reinstateEmployee(actor: UserAccess, employeeId: string, i
     action: 'UPDATE',
     entityType: 'Employee',
     entityId: employee.id,
-    changes: { reinstated: true, employmentStatus: { from: 'TERMINATED', to: 'ACTIVE' }, endDate: { from: employee.endDate?.toISOString().slice(0, 10) ?? null, to: null }, note: input.note?.trim() || undefined },
+    changes: {
+      reinstated: true,
+      employmentStatus: { from: 'TERMINATED', to: 'ACTIVE' },
+      endDate: { from: employee.endDate?.toISOString().slice(0, 10) ?? null, to: null },
+      note: input.note?.trim() || undefined,
+    },
   })
   await notify(await userIdsWithRoles(['APPROVER', 'PREPARER'], [actor.id]), {
     type: 'EMPLOYEE_REINSTATED',

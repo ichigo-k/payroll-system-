@@ -1,7 +1,7 @@
 'use client'
 
-import { useId, useMemo, useRef, useState } from 'react'
 import { Check, Globe, X } from 'lucide-react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { type Country, countryName, flagUrl, searchCountries } from '@/lib/countries'
 import { cn } from '@/lib/utils'
 import { field } from './styles'
@@ -19,7 +19,11 @@ export function CountryFlag({ code, width = 24, className }: { code: string | nu
   }
   if (failed) {
     return (
-      <span aria-hidden style={{ width, height, fontSize: Math.max(8, width * 0.36) }} className={cn('flex shrink-0 items-center justify-center rounded-[3px] bg-accent font-semibold text-primary-strong', className)}>
+      <span
+        aria-hidden
+        style={{ width, height, fontSize: Math.max(8, width * 0.36) }}
+        className={cn('flex shrink-0 items-center justify-center rounded-[3px] bg-accent font-semibold text-primary-strong', className)}
+      >
         {code}
       </span>
     )
@@ -44,7 +48,17 @@ export function CountryFlag({ code, width = 24, className }: { code: string | nu
  * Type-ahead country picker. Nothing is listed until you type; the best matches show with their flags.
  * Submits the ISO country code.
  */
-export function CountryCombobox({ name, id, defaultValue = '', placeholder = 'Start typing a country' }: { name: string; id?: string; defaultValue?: string; placeholder?: string }) {
+export function CountryCombobox({
+  name,
+  id,
+  defaultValue = '',
+  placeholder = 'Start typing a country',
+}: {
+  name: string
+  id?: string
+  defaultValue?: string
+  placeholder?: string
+}) {
   const autoId = useId()
   const inputId = id ?? `${autoId}-input`
   const listId = `${autoId}-list`

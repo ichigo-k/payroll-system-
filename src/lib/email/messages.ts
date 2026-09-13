@@ -195,7 +195,10 @@ export function notificationDraft({
   details?: [string, string][]
   companyName: string
 }): Draft {
-  const blocks: EmailBlock[] = [{ type: 'paragraph', text: firstName ? `Hi ${firstName},` : 'Hi,' }, { type: 'paragraph', text: body }]
+  const blocks: EmailBlock[] = [
+    { type: 'paragraph', text: firstName ? `Hi ${firstName},` : 'Hi,' },
+    { type: 'paragraph', text: body },
+  ]
   if (details?.length) blocks.push({ type: 'details', rows: details })
   if (href) blocks.push({ type: 'button', label: actionLabel, url: appUrl(href) })
   blocks.push({ type: 'note', text: 'You can turn off email notifications from the notifications page in PayCompass.' })

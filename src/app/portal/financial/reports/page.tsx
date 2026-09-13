@@ -1,18 +1,18 @@
+import { Download, FileSpreadsheet } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Download, FileSpreadsheet } from 'lucide-react'
-import { requirePermission } from '@/lib/access'
-import { actorName } from '@/lib/audit-format'
-import { parsePage } from '@/lib/pagination'
-import { EXPORT_TYPES, type ExportType } from '@/lib/payroll-exports'
-import { periodLabel } from '@/lib/payroll-runs'
-import { prisma } from '@/lib/prisma'
 import { queryHref } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button } from '@/components/app/styles'
+import { requirePermission } from '@/lib/access'
+import { actorName } from '@/lib/audit-format'
+import { parsePage } from '@/lib/pagination'
+import { EXPORT_TYPES, type ExportType } from '@/lib/payroll-exports'
+import { periodLabel } from '@/lib/payroll-runs'
+import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Reports' }
@@ -28,8 +28,18 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const selectedId = typeof raw.run === 'string' ? raw.run : undefined
 
   const [runs, history, historyTotal] = await Promise.all([
-    prisma.payrollRun.findMany({ where: { headcount: { gt: 0 } }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 24, select: { id: true, month: true, year: true, status: true, headcount: true } }),
-    prisma.report.findMany({ include: { generatedBy: { select: { id: true, firstName: true, lastName: true, email: true } }, payrollRun: { select: { id: true } } }, orderBy: { generatedAt: 'desc' }, skip, take }),
+    prisma.payrollRun.findMany({
+      where: { headcount: { gt: 0 } },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 24,
+      select: { id: true, month: true, year: true, status: true, headcount: true },
+    }),
+    prisma.report.findMany({
+      include: { generatedBy: { select: { id: true, firstName: true, lastName: true, email: true } }, payrollRun: { select: { id: true } } },
+      orderBy: { generatedAt: 'desc' },
+      skip,
+      take,
+    }),
     prisma.report.count(),
   ])
   const selected = runs.find((r) => r.id === selectedId) ?? runs.find((r) => r.status === 'APPROVED' || r.status === 'PAID') ?? runs[0]
@@ -58,7 +68,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                   <Link
                     href={`/portal/financial/reports?run=${run.id}`}
                     aria-current={run.id === selected?.id ? 'page' : undefined}
-                    className={cn('flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm', run.id === selected?.id ? 'bg-accent font-medium text-primary' : 'hover:bg-secondary')}
+                    className={cn(
+                      'flex items-center justify-between gap-2 rounded-lg px-2 py-2 text-sm',
+                      run.id === selected?.id ? 'bg-accent font-medium text-primary' : 'hover:bg-secondary',
+                    )}
                   >
                     {periodLabel(run.month, run.year)}
                     <StatusBadge status={run.status} />
@@ -121,9 +134,15 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                    <th scope="col" className="py-2 pr-4 font-semibold">Document</th>
-                    <th scope="col" className="px-4 py-2 font-semibold">Exported by</th>
-                    <th scope="col" className="py-2 pl-4 font-semibold">When</th>
+                    <th scope="col" className="py-2 pr-4 font-semibold">
+                      Document
+                    </th>
+                    <th scope="col" className="px-4 py-2 font-semibold">
+                      Exported by
+                    </th>
+                    <th scope="col" className="py-2 pl-4 font-semibold">
+                      When
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -146,7 +165,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 </tbody>
               </table>
             </div>
-            <Pagination page={page} pageSize={pageSize} total={historyTotal} noun="exports" hrefFor={(p, size) => queryHref('/portal/financial/reports', { run: selectedId }, { page: p, size })} />
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={historyTotal}
+              noun="exports"
+              hrefFor={(p, size) => queryHref('/portal/financial/reports', { run: selectedId }, { page: p, size })}
+            />
           </>
         )}
       </section>

@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { UserMinus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
+import { safeAction } from '@/lib/safe-action'
 import { cn } from '@/lib/utils'
 import { excludeEmployeeAction, includeEmployeeAction } from '../actions'
-import { safeAction } from '@/lib/safe-action'
 
 const REASONS = ['Unpaid leave', 'Paid separately this month', 'Pay on hold pending investigation', 'Missing bank or statutory details', 'Other']
 
@@ -35,7 +35,13 @@ export function ExcludeButton({ runId, employeeId, name, period }: { runId: stri
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={`Leave ${name} out of this run`} title="Leave out of this run" className={cn(button.icon, 'hover:bg-danger-soft hover:text-danger')}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`Leave ${name} out of this run`}
+        title="Leave out of this run"
+        className={cn(button.icon, 'hover:bg-danger-soft hover:text-danger')}
+      >
         <UserMinus className="size-4" />
       </button>
       <Dialog
@@ -49,7 +55,12 @@ export function ExcludeButton({ runId, employeeId, name, period }: { runId: stri
             <button type="button" onClick={() => setOpen(false)} className={button.subtle}>
               Cancel
             </button>
-            <button type="button" disabled={pending || !reason || (reason === 'Other' && note.trim().length < 3)} onClick={submit} className={cn(button.primary, 'bg-danger hover:bg-[#C9372C] active:bg-[#AE2E24]')}>
+            <button
+              type="button"
+              disabled={pending || !reason || (reason === 'Other' && note.trim().length < 3)}
+              onClick={submit}
+              className={cn(button.primary, 'bg-danger hover:bg-[#C9372C] active:bg-[#AE2E24]')}
+            >
               {pending ? 'Saving' : 'Leave out'}
             </button>
           </>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
@@ -31,7 +31,13 @@ export function TaxReview({ id, mode, blockedReason }: { id: string; mode: 'acti
       <button type="button" disabled={pending || !!blockedReason} title={blockedReason ?? undefined} onClick={() => setOpen(true)} className={button.default}>
         Send back
       </button>
-      <button type="button" disabled={pending || !!blockedReason} title={blockedReason ?? undefined} onClick={() => act(() => activateTaxConfiguration(id))} className={button.primary}>
+      <button
+        type="button"
+        disabled={pending || !!blockedReason}
+        title={blockedReason ?? undefined}
+        onClick={() => act(() => activateTaxConfiguration(id))}
+        className={button.primary}
+      >
         <Check className="size-4" />
         {mode === 'activate' ? 'Activate' : 'Approve changes'}
       </button>

@@ -1,7 +1,7 @@
 'use client'
 
-import { useId, useMemo, useRef, useState } from 'react'
 import { Check, Landmark } from 'lucide-react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { bankInitials, bankLogoUrl, findGhanaBank, type GhanaBank, searchGhanaBanks } from '@/lib/ghana-banks'
 import { cn } from '@/lib/utils'
 import { field } from './styles'
@@ -20,7 +20,11 @@ export function BankLogo({ name, size = 24, className }: { name: string | null |
   }
   if (!bank || failed) {
     return (
-      <span aria-hidden style={{ ...box, fontSize: Math.max(8, size * 0.36) }} className={cn('flex shrink-0 items-center justify-center rounded-md bg-accent font-semibold text-primary-strong', className)}>
+      <span
+        aria-hidden
+        style={{ ...box, fontSize: Math.max(8, size * 0.36) }}
+        className={cn('flex shrink-0 items-center justify-center rounded-md bg-accent font-semibold text-primary-strong', className)}
+      >
         {bankInitials(name)}
       </span>
     )

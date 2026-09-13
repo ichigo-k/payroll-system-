@@ -72,17 +72,7 @@ export function LogoMark({ size = 32, appearance = 'brand', title, className, ..
 }
 
 /** Mark plus wordmark. Wordmark size scales with the mark. */
-export function Logo({
-  size = 24,
-  appearance = 'brand',
-  wordmark = true,
-  className,
-}: {
-  size?: number
-  appearance?: LogoAppearance
-  wordmark?: boolean
-  className?: string
-}) {
+export function Logo({ size = 24, appearance = 'brand', wordmark = true, className }: { size?: number; appearance?: LogoAppearance; wordmark?: boolean; className?: string }) {
   if (!wordmark) return <LogoMark size={size} appearance={appearance} title={BRAND.name} className={className} />
 
   return (

@@ -31,9 +31,6 @@ export async function POST() {
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[logout] Error:', (err as Error).message)
-    return NextResponse.json(
-      { message: 'Logout failed. Please try again.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ message: 'Logout failed. Please try again.' }, { status: 500 })
   }
 }

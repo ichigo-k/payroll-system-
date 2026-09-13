@@ -1,11 +1,11 @@
+import { Download } from 'lucide-react'
 import type { Metadata } from 'next'
-import { formatCurrency } from '@/lib/payroll'
-import { prisma } from '@/lib/prisma'
-import { requireSelfServiceEmployee } from '@/lib/self-service'
 import { ListTabs } from '@/components/app/list-tabs'
 import { PageHeader } from '@/components/app/page-header'
 import { button } from '@/components/app/styles'
-import { Download } from 'lucide-react'
+import { formatCurrency } from '@/lib/payroll'
+import { prisma } from '@/lib/prisma'
+import { requireSelfServiceEmployee } from '@/lib/self-service'
 
 export const metadata: Metadata = { title: 'Tax & SSNIT' }
 
@@ -16,12 +16,23 @@ export default async function TaxSummaryPage({ searchParams }: { searchParams: P
   const raw = await searchParams
 
   const years = employee
-    ? (await prisma.payrollRun.findMany({ where: { status: 'PAID', payrollDetails: { some: { employeeId: employee.id } } }, distinct: ['year'], select: { year: true }, orderBy: { year: 'desc' } })).map((r) => r.year)
+    ? (
+        await prisma.payrollRun.findMany({
+          where: { status: 'PAID', payrollDetails: { some: { employeeId: employee.id } } },
+          distinct: ['year'],
+          select: { year: true },
+          orderBy: { year: 'desc' },
+        })
+      ).map((r) => r.year)
     : []
   const year = typeof raw.year === 'string' && years.includes(Number(raw.year)) ? Number(raw.year) : (years[0] ?? new Date().getFullYear())
 
   const lines = employee
-    ? await prisma.payrollDetail.findMany({ where: { employeeId: employee.id, payrollRun: { status: 'PAID', year } }, include: { payrollRun: { select: { month: true } } }, orderBy: { payrollRun: { month: 'asc' } } })
+    ? await prisma.payrollDetail.findMany({
+        where: { employeeId: employee.id, payrollRun: { status: 'PAID', year } },
+        include: { payrollRun: { select: { month: true } } },
+        orderBy: { payrollRun: { month: 'asc' } },
+      })
     : []
   const sum = (key: 'grossIncome' | 'taxableIncome' | 'paye' | 'ssnitEmployee' | 'ssnitEmployer') => lines.reduce((total, l) => total + Number(l[key]), 0)
 
@@ -40,7 +51,9 @@ export default async function TaxSummaryPage({ searchParams }: { searchParams: P
         }
       />
 
-      {years.length > 1 && <ListTabs label="Tax years" tabs={years.map((y) => ({ key: String(y), label: String(y), active: y === year, href: `/portal/self-service/tax?year=${y}` }))} />}
+      {years.length > 1 && (
+        <ListTabs label="Tax years" tabs={years.map((y) => ({ key: String(y), label: String(y), active: y === year, href: `/portal/self-service/tax?year=${y}` }))} />
+      )}
 
       {lines.length === 0 ? (
         <div className="mt-4 rounded-lg border border-dashed border-input px-6 py-14 text-center">
@@ -69,12 +82,24 @@ export default async function TaxSummaryPage({ searchParams }: { searchParams: P
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-4 font-semibold">Month</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Gross pay</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Chargeable income</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">PAYE</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Your SSNIT</th>
-                  <th scope="col" className="py-2 pl-4 text-right font-semibold">Employer SSNIT</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    Month
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Gross pay
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Chargeable income
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    PAYE
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Your SSNIT
+                  </th>
+                  <th scope="col" className="py-2 pl-4 text-right font-semibold">
+                    Employer SSNIT
+                  </th>
                 </tr>
               </thead>
               <tbody>

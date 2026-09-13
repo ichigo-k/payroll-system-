@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { requireRole } from '@/lib/access'
-import { prisma } from '@/lib/prisma'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
+import { requireRole } from '@/lib/access'
+import { prisma } from '@/lib/prisma'
 import { InviteUserForm } from '../invite-user-form'
 
 export const metadata: Metadata = { title: 'Invite user' }
@@ -12,7 +12,10 @@ export default async function InviteUserPage({ searchParams }: { searchParams: P
   if (!actor) return <NoPermission title="You can’t invite users" description="Only administrators can invite people and choose their roles." />
 
   const requestedRole = (await searchParams).role
-  const defaultRole = typeof requestedRole === 'string' && ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR'].includes(requestedRole) ? (requestedRole as 'ADMIN' | 'PREPARER' | 'APPROVER' | 'AUDITOR') : undefined
+  const defaultRole =
+    typeof requestedRole === 'string' && ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR'].includes(requestedRole)
+      ? (requestedRole as 'ADMIN' | 'PREPARER' | 'APPROVER' | 'AUDITOR')
+      : undefined
   const unlinked = await prisma.employee.findMany({
     where: { userId: null },
     select: { id: true, firstName: true, lastName: true, employeeId: true, email: true },

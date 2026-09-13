@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { currentUser } from '@/lib/access'
 import { NotificationsView } from '@/components/app/notifications-view'
+import { currentUser } from '@/lib/access'
 import { markChecklistVisit } from '@/lib/checklists'
 
 export const metadata: Metadata = { title: 'Notifications' }

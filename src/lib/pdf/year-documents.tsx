@@ -1,11 +1,18 @@
 import { Text, View } from '@react-pdf/renderer'
 import { activeCurrency } from '@/lib/currency'
-import { amount, colors, type Column, Doc, DocPage, Facts, longDate, type Meta, money, Signatures, styles, Table } from './theme'
+import { amount, type Column, colors, Doc, DocPage, Facts, longDate, type Meta, money, Signatures, styles, Table } from './theme'
 
 /** Year-end and on-request documents: annual tax certificates and employment confirmation letters. */
 
 export type CertificateMonth = { month: number; grossIncome: number; ssnitEmployee: number; taxableIncome: number; paye: number }
-export type CertificateEmployee = { employeeCode: string; employeeName: string; designation: string | null; tin: string | null; ssnitNumber: string | null; months: CertificateMonth[] }
+export type CertificateEmployee = {
+  employeeCode: string
+  employeeName: string
+  designation: string | null
+  tin: string | null
+  ssnitNumber: string | null
+  months: CertificateMonth[]
+}
 
 const monthName = (month: number) => new Date(Date.UTC(2000, month - 1, 1)).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })
 const total = (months: CertificateMonth[], pick: (m: CertificateMonth) => number) => Math.round(months.reduce((t, m) => t + pick(m), 0) * 100) / 100
@@ -55,12 +62,18 @@ export function TaxCertificatesDocument({ meta, year, employees, signatory }: { 
             <Table
               columns={columns}
               rows={e.months}
-              total={['Total', amount(total(e.months, (m) => m.grossIncome)), amount(total(e.months, (m) => m.ssnitEmployee)), amount(total(e.months, (m) => m.taxableIncome)), amount(total(e.months, (m) => m.paye))]}
+              total={[
+                'Total',
+                amount(total(e.months, (m) => m.grossIncome)),
+                amount(total(e.months, (m) => m.ssnitEmployee)),
+                amount(total(e.months, (m) => m.taxableIncome)),
+                amount(total(e.months, (m) => m.paye)),
+              ]}
             />
 
             <Text style={[styles.note, { marginTop: 14 }]}>
-              This certifies that {meta.company.companyName} paid the income above to {e.employeeName} in {year} and deducted PAYE and employee SSNIT contributions as shown, based on
-              approved payroll records. Keep it with your tax records.
+              This certifies that {meta.company.companyName} paid the income above to {e.employeeName} in {year} and deducted PAYE and employee SSNIT contributions as shown, based
+              on approved payroll records. Keep it with your tax records.
             </Text>
             <Signatures people={[{ role: 'Authorised signatory', name: signatory }, { role: 'Company stamp' }]} />
           </DocPage>
@@ -97,7 +110,9 @@ export function ConfirmationLetterDocument({ meta, letter }: { meta: Meta; lette
         </Text>
         <Text style={{ marginBottom: 10 }}>
           This is to confirm that {letter.employeeName} {letter.current ? 'is' : 'was'} employed by {meta.company.companyName} as {role}.{' '}
-          {letter.current ? `They have worked with us since ${longDate(letter.startDate)}.` : `They worked with us from ${longDate(letter.startDate)} to ${letter.endDate ? longDate(letter.endDate) : 'their last working day'}.`}
+          {letter.current
+            ? `They have worked with us since ${longDate(letter.startDate)}.`
+            : `They worked with us from ${longDate(letter.startDate)} to ${letter.endDate ? longDate(letter.endDate) : 'their last working day'}.`}
         </Text>
         {letter.salary ? (
           <View style={{ marginBottom: 10 }}>
@@ -120,7 +135,11 @@ export function ConfirmationLetterDocument({ meta, letter }: { meta: Meta; lette
             </View>
           </View>
         ) : null}
-        {letter.purpose ? <Text style={{ marginBottom: 10 }}>This letter is issued at {letter.firstName}’s request for {letter.purpose}.</Text> : null}
+        {letter.purpose ? (
+          <Text style={{ marginBottom: 10 }}>
+            This letter is issued at {letter.firstName}’s request for {letter.purpose}.
+          </Text>
+        ) : null}
         <Text style={{ marginBottom: 10 }}>Please contact us if you need to verify these details.</Text>
         <Text>Yours faithfully,</Text>
         <Signatures people={[{ role: letter.signatory.title, name: letter.signatory.name }]} />

@@ -24,9 +24,6 @@ export async function POST() {
     return NextResponse.json({ deleted: count })
   } catch (err) {
     console.error('[cleanup-otp] Error:', (err as Error).message)
-    return NextResponse.json(
-      { message: 'Cleanup failed. Please try again.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ message: 'Cleanup failed. Please try again.' }, { status: 500 })
   }
 }

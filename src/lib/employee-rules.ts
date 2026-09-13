@@ -7,7 +7,17 @@ export const OFFBOARDING_REASONS = ['Resignation', 'End of contract', 'Retiremen
 
 type EmployeeState = { id: string; employmentStatus: string; startDate: Date; endDate?: Date | null }
 
-export function checkOffboard({ actorEmployeeId, employee, endDate, reason }: { actorEmployeeId: string | null; employee: EmployeeState; endDate: Date | null; reason: string }): string | null {
+export function checkOffboard({
+  actorEmployeeId,
+  employee,
+  endDate,
+  reason,
+}: {
+  actorEmployeeId: string | null
+  employee: EmployeeState
+  endDate: Date | null
+  reason: string
+}): string | null {
   if (actorEmployeeId === employee.id) return 'You can’t offboard yourself. Ask another administrator.'
   if (employee.employmentStatus === 'TERMINATED') return 'This employee has already left.'
   if (!endDate || Number.isNaN(endDate.getTime())) return 'Choose their last working day.'

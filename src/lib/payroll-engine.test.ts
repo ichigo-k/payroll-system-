@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeInPeriod, calculateLine, periodBounds, progressiveTax, reviewFlags, prorationFactor } from './payroll-engine'
+import { activeInPeriod, calculateLine, periodBounds, progressiveTax, prorationFactor, reviewFlags } from './payroll-engine'
 import { approvalsRemaining, checkDecision, checkMarkPaid, checkRecall, checkSubmit, effectiveTaxConfig } from './payroll-rules'
 
 const brackets = [
@@ -22,7 +22,10 @@ describe('calculateLine', () => {
   it('deducts SSNIT before PAYE and computes net pay', () => {
     const line = calculateLine({
       baseSalary: 3000,
-      allowances: [{ amount: 500, frequency: 'monthly' }, { amount: 1200, frequency: 'annual' }],
+      allowances: [
+        { amount: 500, frequency: 'monthly' },
+        { amount: 1200, frequency: 'annual' },
+      ],
       deductions: [100],
       brackets,
       ssnitEmployeeRate: 5.5,
@@ -83,7 +86,14 @@ describe('prorationFactor', () => {
 
 describe('effectiveTaxConfig', () => {
   const approved = new Date('2026-01-01')
-  const config = (id: string, year: number, month: number, extra: { isActive?: boolean; approvedAt?: Date | null } = {}) => ({ id, year, month, isActive: true, approvedAt: approved, ...extra })
+  const config = (id: string, year: number, month: number, extra: { isActive?: boolean; approvedAt?: Date | null } = {}) => ({
+    id,
+    year,
+    month,
+    isActive: true,
+    approvedAt: approved,
+    ...extra,
+  })
 
   it('carries the latest approved configuration forward into later years', () => {
     expect(effectiveTaxConfig([config('2024', 2024, 0)], 2026, 9)?.id).toBe('2024')

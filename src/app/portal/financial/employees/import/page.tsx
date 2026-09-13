@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
+import { NoPermission } from '@/components/app/no-permission'
+import { PageHeader } from '@/components/app/page-header'
 import { requirePermission } from '@/lib/access'
 import { listDepartments } from '@/lib/departments'
 import { prisma } from '@/lib/prisma'
-import { NoPermission } from '@/components/app/no-permission'
-import { PageHeader } from '@/components/app/page-header'
 import { BulkImport } from '../bulk-import'
 
 export const metadata: Metadata = { title: 'Import employees' }

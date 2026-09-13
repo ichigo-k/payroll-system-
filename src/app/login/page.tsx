@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { KeyRound, ScrollText, ShieldCheck } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { AuthCard, AuthNotice, AuthShell } from '@/components/app/auth-shell'
+import { Button } from '@/components/ui/button'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { AuthCard, AuthNotice, AuthShell } from '@/components/app/auth-shell'
 
 const schema = z.object({
   email: z.string().email('Please enter a valid email address.'),
@@ -46,7 +46,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email: values.email }),
       })
 
-      const data = await response.json() as { message: string }
+      const data = (await response.json()) as { message: string }
 
       if (!response.ok) {
         setServerError(true)
@@ -75,9 +75,7 @@ export default function LoginPage() {
       aside={
         <>
           <h2 className="text-3xl leading-[1.1] font-semibold tracking-tight">Payroll for teams in Ghana</h2>
-          <p className="mt-3 text-sm text-white/85">
-            Run monthly pay with PAYE and SSNIT worked out for you, then send it for approval in the same place.
-          </p>
+          <p className="mt-3 text-sm text-white/85">Run monthly pay with PAYE and SSNIT worked out for you, then send it for approval in the same place.</p>
         </>
       }
       asideFooter={
@@ -98,11 +96,7 @@ export default function LoginPage() {
       <p className="mt-2 text-sm text-muted-foreground">Enter your work email and we&apos;ll send you a one-time code. No password needed.</p>
 
       <AuthCard
-        footer={
-          <p className="text-xs text-muted-foreground">
-            Employees: use the work email on your payroll record. Can’t sign in? Ask your HR or payroll administrator.
-          </p>
-        }
+        footer={<p className="text-xs text-muted-foreground">Employees: use the work email on your payroll record. Can’t sign in? Ask your HR or payroll administrator.</p>}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState, useTransition } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Popover } from '@base-ui/react/popover'
 import { Bell, CheckCheck } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { markAllNotificationsRead, markNotificationRead, recentNotifications } from '@/app/portal/notification-actions'
 import type { NotificationPayload } from '@/lib/notifications'
 import { cn } from '@/lib/utils'

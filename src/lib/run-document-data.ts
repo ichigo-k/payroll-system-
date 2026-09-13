@@ -3,8 +3,8 @@ import { actorName } from '@/lib/audit-format'
 import { parseLineItems } from '@/lib/pay-items'
 import type { ExportCompany, ExportLine } from '@/lib/payroll-exports'
 import { periodLabel } from '@/lib/payroll-runs'
-import type { Company } from '@/lib/pdf/theme'
 import type { RunInfo, RunLine } from '@/lib/pdf/run-documents'
+import type { Company } from '@/lib/pdf/theme'
 import { prisma } from '@/lib/prisma'
 
 /** A payroll line snapshot in the shape the documents and exports use. */
@@ -63,7 +63,13 @@ export async function loadRunDocumentData(runId: string) {
   if (!run) return null
 
   const company = await loadCompany()
-  const exportCompany: ExportCompany = { companyName: company.companyName, taxId: company.taxId, employerSsnitNumber: company.employerSsnitNumber, bankName: company.bankName, bankAccountNumber: company.bankAccountNumber }
+  const exportCompany: ExportCompany = {
+    companyName: company.companyName,
+    taxId: company.taxId,
+    employerSsnitNumber: company.employerSsnitNumber,
+    bankName: company.bankName,
+    bankAccountNumber: company.bankAccountNumber,
+  }
 
   const lines = run.payrollDetails.map(toRunLine)
 

@@ -35,12 +35,7 @@ export function allCountries(): Country[] {
   return cached
 }
 
-const fold = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim()
+const fold = (value: string) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
 
 /** Demonyms people commonly type instead of the country name. */
 const ALIASES: Record<string, string> = {

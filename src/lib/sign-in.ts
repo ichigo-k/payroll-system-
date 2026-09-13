@@ -41,7 +41,13 @@ export async function resolveAccountAfterCode(email: string) {
     if (!user.employee && employee && !employee.userId) {
       await prisma.employee.update({ where: { id: employee.id }, data: { userId: user.id } })
       await prisma.auditLog.create({
-        data: { userId: user.id, action: 'UPDATE', entityType: 'Employee', entityId: employee.id, changes: JSON.stringify({ userId: { from: null, to: user.id }, reason: 'Linked by matching email at sign-in' }) },
+        data: {
+          userId: user.id,
+          action: 'UPDATE',
+          entityType: 'Employee',
+          entityId: employee.id,
+          changes: JSON.stringify({ userId: { from: null, to: user.id }, reason: 'Linked by matching email at sign-in' }),
+        },
       })
       invalidateUserAccess(user.id)
     }
@@ -56,7 +62,13 @@ export async function resolveAccountAfterCode(email: string) {
       })
       await tx.employee.update({ where: { id: employee.id }, data: { userId: newUser.id } })
       await tx.auditLog.create({
-        data: { userId: newUser.id, action: 'CREATE', entityType: 'User', entityId: newUser.id, changes: JSON.stringify({ role: 'EMPLOYEE', employeeId: employee.id, reason: 'Created at first self-service sign-in' }) },
+        data: {
+          userId: newUser.id,
+          action: 'CREATE',
+          entityType: 'User',
+          entityId: newUser.id,
+          changes: JSON.stringify({ role: 'EMPLOYEE', employeeId: employee.id, reason: 'Created at first self-service sign-in' }),
+        },
       })
       return newUser
     })

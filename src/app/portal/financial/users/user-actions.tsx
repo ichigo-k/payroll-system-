@@ -1,19 +1,19 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Menu } from '@base-ui/react/menu'
 import { Ellipsis, Search } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useMemo, useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import type { ActionResult } from '@/lib/access'
 import { ROLE_INFO, type RoleName } from '@/lib/roles'
+import { safeAction } from '@/lib/safe-action'
 import { cn } from '@/lib/utils'
 import { changeRoleAction, linkEmployeeAction, resendInviteAction, setStatusAction, unlinkEmployeeAction } from './actions'
 import type { UnlinkedEmployee } from './invite-user-form'
 import { RolePicker } from './role-picker'
-import { safeAction } from '@/lib/safe-action'
 
 export type UserRowData = {
   id: string
@@ -27,8 +27,7 @@ export type UserRowData = {
 
 type DialogKind = 'role' | 'link' | 'unlink' | 'deactivate' | 'reactivate' | null
 
-const itemClass =
-  'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
+const itemClass = 'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
 
 export function UserActions({ user, isSelf, employees }: { user: UserRowData; isSelf: boolean; employees: UnlinkedEmployee[] }) {
   const router = useRouter()
@@ -135,9 +134,7 @@ export function UserActions({ user, isSelf, employees }: { user: UserRowData; is
             hint={(r) => (r === 'EMPLOYEE' && !user.employee ? 'Link an employee record first.' : r === user.role ? 'Current role' : undefined)}
           />
           {user.employee && role !== 'EMPLOYEE' && (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {user.name} stays linked to their employee record, so they can still open their own payslips.
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">{user.name} stays linked to their employee record, so they can still open their own payslips.</p>
           )}
         </div>
       </Dialog>
@@ -168,7 +165,10 @@ export function UserActions({ user, isSelf, employees }: { user: UserRowData; is
             <p className="px-2 py-6 text-center text-sm text-muted-foreground">{employees.length === 0 ? 'Every employee record is already linked.' : 'No employees match.'}</p>
           ) : (
             filtered.map((employee) => (
-              <label key={employee.id} className={cn('flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted', employeeId === employee.id && 'bg-accent hover:bg-accent')}>
+              <label
+                key={employee.id}
+                className={cn('flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted', employeeId === employee.id && 'bg-accent hover:bg-accent')}
+              >
                 <input type="radio" name={`link-${user.id}`} checked={employeeId === employee.id} onChange={() => setEmployeeId(employee.id)} className="size-4 accent-primary" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium text-foreground">{employee.name}</span>
