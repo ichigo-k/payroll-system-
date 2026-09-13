@@ -12,6 +12,7 @@ const FINANCIAL_NAV: (NavItem & { permission: Permission })[] = [
   { label: 'User management', href: '/portal/financial/users', permission: 'users.view' },
   { label: 'Company settings', href: '/portal/financial/config', permission: 'settings.view' },
   { label: 'Reports', href: '/portal/financial/reports', permission: 'reports.export' },
+  { label: 'Exports', href: '/portal/financial/exports', permission: 'employees.view' },
   { label: 'Audit log', href: '/portal/financial/audit', permission: 'audit.view' },
 ]
 

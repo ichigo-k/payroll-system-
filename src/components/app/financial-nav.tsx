@@ -7,6 +7,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   ChartColumn,
   ChevronDown,
+  FileDown,
   ClipboardCheck,
   ClipboardList,
   House,
@@ -29,6 +30,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/portal/financial/tax': Percent,
   '/portal/financial/payroll': ClipboardList,
   '/portal/financial/reports': ChartColumn,
+  '/portal/financial/exports': FileDown,
   '/portal/financial/approvals': ClipboardCheck,
   '/portal/financial/users': UserCog,
   '/portal/financial/config': Settings,
@@ -40,7 +42,7 @@ const NAV_SECTIONS: { label: string; hrefs: string[] }[] = [
   { label: 'Payroll', hrefs: ['/portal/financial/payroll', '/portal/financial/approvals'] },
   { label: 'People', hrefs: ['/portal/financial/employees', '/portal/financial/salary'] },
   { label: 'Configuration', hrefs: ['/portal/financial/tax', '/portal/financial/users', '/portal/financial/config'] },
-  { label: 'Insights', hrefs: ['/portal/financial/reports', '/portal/financial/audit'] },
+  { label: 'Insights', hrefs: ['/portal/financial/reports', '/portal/financial/exports', '/portal/financial/audit'] },
 ]
 
 function isActivePath(pathname: string, href: string) {

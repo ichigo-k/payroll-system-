@@ -32,6 +32,12 @@ const STATUS: Record<string, { label: string; appearance: Appearance }> = {
   APPROVED: { label: 'Approved', appearance: 'inprogress' },
   REJECTED: { label: 'Rejected', appearance: 'removed' },
   PAID: { label: 'Paid', appearance: 'success' },
+  // Exports
+  EXPORT_PENDING: { label: 'Preparing', appearance: 'inprogress' },
+  EXPORT_READY: { label: 'Ready', appearance: 'success' },
+  EXPORT_DOWNLOADED: { label: 'Downloaded', appearance: 'default' },
+  EXPORT_FAILED: { label: 'Failed', appearance: 'removed' },
+  EXPORT_EXPIRED: { label: 'Expired', appearance: 'default' },
 }
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
