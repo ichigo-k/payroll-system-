@@ -34,7 +34,16 @@ export function SuggestInput({
   const matches = useMemo(() => {
     const q = value.trim().toLowerCase()
     if (!q || !typed.current) return []
-    return suggestions.filter((s) => s.toLowerCase() !== q && s.toLowerCase().split(/\s+/).some((word) => word.startsWith(q))).slice(0, limit)
+    return suggestions
+      .filter(
+        (s) =>
+          s.toLowerCase() !== q &&
+          s
+            .toLowerCase()
+            .split(/\s+/)
+            .some((word) => word.startsWith(q)),
+      )
+      .slice(0, limit)
   }, [value, suggestions, limit])
 
   const pick = (suggestion: string) => {
@@ -82,7 +91,11 @@ export function SuggestInput({
         className={field}
       />
       {open && matches.length > 0 && (
-        <div id={listId} role="listbox" className="panel-enter absolute z-30 mt-1 w-full rounded-lg border border-border bg-popover p-1 shadow-[0_8px_12px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.31)]">
+        <div
+          id={listId}
+          role="listbox"
+          className="panel-enter absolute z-30 mt-1 w-full rounded-lg border border-border bg-popover p-1 shadow-[0_8px_12px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.31)]"
+        >
           {matches.map((suggestion, index) => (
             // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/useFocusableInteractive: keyboard selection is handled on the input via aria-activedescendant
             <div

@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
+import { Select } from '@/components/app/select'
 import { button, field } from '@/components/app/styles'
+import { SuggestInput } from '@/components/app/suggest-input'
 import type { ActionResult } from '@/lib/access'
+import { activeCurrency, formatMoney } from '@/lib/currency'
 import { ALLOWANCE_SUGGESTIONS, DEDUCTION_SUGGESTIONS, formatPercentChange, SALARY_CHANGE_REASONS, salaryChangePercent } from '@/lib/pay-items'
+import { safeAction } from '@/lib/safe-action'
 import { cn } from '@/lib/utils'
 import {
   addAllowanceAction,
@@ -19,10 +23,6 @@ import {
   updateDeductionAction,
   updateStatutoryAction,
 } from './pay-actions'
-import { Select } from '@/components/app/select'
-import { SuggestInput } from '@/components/app/suggest-input'
-import { activeCurrency, formatMoney } from '@/lib/currency'
-import { safeAction } from '@/lib/safe-action'
 
 export type PayItem = { id: string; name: string; amount: number; frequency: string; startDate?: string | null; endDate?: string | null }
 
@@ -117,7 +117,14 @@ export function PayEditor({
     <>
       <div className="grid gap-1 sm:col-span-2">
         <Label required>Name on payslip</Label>
-        <SuggestInput id={listId} value={form.name ?? ''} onChange={(name) => setForm((f) => ({ ...f, name }))} suggestions={suggestions} maxLength={60} placeholder="Type a name, like Fuel or Staff loan" />
+        <SuggestInput
+          id={listId}
+          value={form.name ?? ''}
+          onChange={(name) => setForm((f) => ({ ...f, name }))}
+          suggestions={suggestions}
+          maxLength={60}
+          placeholder="Type a name, like Fuel or Staff loan"
+        />
       </div>
       <label className="grid gap-1">
         <Label required>Amount ({activeCurrency()})</Label>
@@ -195,7 +202,12 @@ export function PayEditor({
           </label>
           <div className="grid gap-1 sm:col-span-2">
             <Label required>Reason</Label>
-            <Select value={form.reason ?? ''} onValueChange={(reason) => setForm((f) => ({ ...f, reason }))} placeholder="Choose a reason" options={SALARY_CHANGE_REASONS.map((r) => ({ value: r, label: r }))} />
+            <Select
+              value={form.reason ?? ''}
+              onValueChange={(reason) => setForm((f) => ({ ...f, reason }))}
+              placeholder="Choose a reason"
+              options={SALARY_CHANGE_REASONS.map((r) => ({ value: r, label: r }))}
+            />
             {form.reason === 'Correction' && <span className="text-xs text-muted-foreground">Use the same start date as the current salary to fix its amount in place.</span>}
           </div>
           <label className="grid gap-1 sm:col-span-2">

@@ -1,6 +1,6 @@
+import { Lock } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Lock } from 'lucide-react'
 import { BRAND, Logo } from '@/lib/brand'
 
 // "Colleagues reviewing brochure in workspace" by Gylain Omer, Unsplash License (free for commercial use).
@@ -10,15 +10,7 @@ const AUTH_PHOTO = 'https://images.unsplash.com/photo-1787532378776-2ace7a3e9901
  * Sign-in layout: form column on the left, photo panel on the right.
  * On small screens the photo becomes a short banner above the form.
  */
-export function AuthShell({
-  aside,
-  asideFooter,
-  children,
-}: {
-  aside: React.ReactNode
-  asideFooter?: React.ReactNode
-  children: React.ReactNode
-}) {
+export function AuthShell({ aside, asideFooter, children }: { aside: React.ReactNode; asideFooter?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="grid min-h-dvh flex-1 grid-rows-[auto_1fr] bg-card lg:grid-cols-[minmax(0,1fr)_minmax(420px,36%)] lg:grid-rows-1">
       <div className="flex min-w-0 flex-col px-5 py-6 sm:px-10 lg:px-14 lg:py-8">

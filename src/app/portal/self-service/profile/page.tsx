@@ -1,10 +1,10 @@
-import type { Metadata } from 'next'
-import { countryName } from '@/lib/countries'
-import { genderLabel } from '@/lib/people'
 import { Info } from 'lucide-react'
-import { maskAccount, requireSelfServiceEmployee } from '@/lib/self-service'
+import type { Metadata } from 'next'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
+import { countryName } from '@/lib/countries'
+import { genderLabel } from '@/lib/people'
+import { maskAccount, requireSelfServiceEmployee } from '@/lib/self-service'
 
 export const metadata: Metadata = { title: 'Profile' }
 
@@ -60,7 +60,10 @@ export default async function ProfilePage() {
 
       <div role="note" className="mb-6 flex items-start gap-2.5 rounded-lg bg-accent px-4 py-3 text-sm">
         <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-        <p>To change any of these details, including where your salary is paid, contact your payroll or HR team. Bank changes are verified and you’ll get an email whenever they happen.</p>
+        <p>
+          To change any of these details, including where your salary is paid, contact your payroll or HR team. Bank changes are verified and you’ll get an email whenever they
+          happen.
+        </p>
       </div>
 
       {groups.map((group) => (

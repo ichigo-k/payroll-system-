@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useRef, useState, useTransition } from 'react'
+import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Upload, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CircleAlert, CircleCheck, Download, FileSpreadsheet, Upload, X } from 'lucide-react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useFlags } from '@/components/app/flags'
 import { button } from '@/components/app/styles'
 import { EMPLOYEE_IMPORT_COLUMNS, parseEmployeeCsv } from '@/lib/csv'
@@ -92,7 +92,9 @@ export function BulkImport({ existingEmails, existingIds, departments }: { exist
               <dd className="mt-1 font-mono text-xs text-foreground">{EMPLOYEE_IMPORT_COLUMNS.optional.join(', ')}</dd>
             </div>
           </dl>
-          <p className="text-xs text-subtlest">Dates use YYYY-MM-DD. Leave employee_id blank to generate IDs, or fill it to keep IDs from another system. New departments are created automatically.</p>
+          <p className="text-xs text-subtlest">
+            Dates use YYYY-MM-DD. Leave employee_id blank to generate IDs, or fill it to keep IDs from another system. New departments are created automatically.
+          </p>
         </div>
       </section>
 
@@ -164,13 +166,27 @@ export function BulkImport({ existingEmails, existingIds, departments }: { exist
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-3 font-semibold">Row</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Name</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Email</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Employee ID</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Department</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Start date</th>
-                  <th scope="col" className="py-2 pl-3 font-semibold">Result</th>
+                  <th scope="col" className="py-2 pr-3 font-semibold">
+                    Row
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Name
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Email
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Employee ID
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Department
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Start date
+                  </th>
+                  <th scope="col" className="py-2 pl-3 font-semibold">
+                    Result
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -201,7 +217,11 @@ export function BulkImport({ existingEmails, existingIds, departments }: { exist
                 ))}
               </tbody>
             </table>
-            {rows.length > PREVIEW_LIMIT && <p className="mt-2 text-xs text-muted-foreground">Showing the first {PREVIEW_LIMIT} of {rows.length} rows.</p>}
+            {rows.length > PREVIEW_LIMIT && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Showing the first {PREVIEW_LIMIT} of {rows.length} rows.
+              </p>
+            )}
           </div>
         </section>
       )}

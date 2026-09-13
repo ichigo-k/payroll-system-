@@ -3,8 +3,9 @@
  *
  * Validates: Requirements 2.1
  */
-import { describe, it, expect } from 'vitest'
+
 import * as fc from 'fast-check'
+import { describe, expect, it } from 'vitest'
 import { generateOtp } from './otp'
 
 describe('Property 3: generateOtp always returns a 6-digit numeric string', () => {
@@ -25,9 +26,9 @@ describe('Property 3: generateOtp always returns a 6-digit numeric string', () =
           const numValue = Number.parseInt(otp, 10)
           expect(numValue).toBeGreaterThanOrEqual(0)
           expect(numValue).toBeLessThan(1_000_000)
-        }
+        },
       ),
-      { numRuns: 100 }
+      { numRuns: 100 },
     )
   })
 })

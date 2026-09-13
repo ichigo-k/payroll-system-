@@ -1,11 +1,11 @@
 import type { AuditAction, Prisma } from '@prisma/client'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth-config'
+import { loadActiveCurrency } from '@/lib/currency-server'
 import { can, PERMISSIONS, type Permission } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import type { RoleName } from '@/lib/roles'
 import { getUserAccess } from '@/lib/user-access'
-import { loadActiveCurrency } from '@/lib/currency-server'
 
 export { getUserAccess, invalidateUserAccess, type UserAccess } from '@/lib/user-access'
 

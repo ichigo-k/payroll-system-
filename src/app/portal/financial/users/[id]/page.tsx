@@ -1,18 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { requirePermission } from '@/lib/access'
-import { ACTION_LABELS, actorName, ENTITY_LABELS } from '@/lib/audit-format'
-import { parsePage } from '@/lib/pagination'
-import { prisma } from '@/lib/prisma'
-import { ROLE_INFO } from '@/lib/roles'
-import { accessState } from '@/lib/user-rules'
 import { HistoryList } from '@/components/app/history-list'
 import { ListTabs, queryHref } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
 import { StatusBadge } from '@/components/app/status-badge'
+import { requirePermission } from '@/lib/access'
+import { ACTION_LABELS, actorName, ENTITY_LABELS } from '@/lib/audit-format'
+import { parsePage } from '@/lib/pagination'
+import { prisma } from '@/lib/prisma'
+import { ROLE_INFO } from '@/lib/roles'
+import { accessState } from '@/lib/user-rules'
 
 export const metadata: Metadata = { title: 'User' }
 
@@ -46,7 +46,15 @@ export default async function UserPage({ params, searchParams }: { params: Promi
   const [rows, total, changes, changesTotal] = await Promise.all([
     tab === 'activity' ? prisma.auditLog.findMany({ where: activityWhere, orderBy: { timestamp: 'desc' }, skip, take }) : [],
     prisma.auditLog.count({ where: activityWhere }),
-    tab === 'changes' ? prisma.auditLog.findMany({ where: changesWhere, include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } }, orderBy: { timestamp: 'desc' }, skip, take }) : [],
+    tab === 'changes'
+      ? prisma.auditLog.findMany({
+          where: changesWhere,
+          include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          orderBy: { timestamp: 'desc' },
+          skip,
+          take,
+        })
+      : [],
     prisma.auditLog.count({ where: changesWhere }),
   ])
 
@@ -87,10 +95,18 @@ export default async function UserPage({ params, searchParams }: { params: Promi
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                    <th scope="col" className="py-2 pr-4 font-semibold">When</th>
-                    <th scope="col" className="px-4 py-2 font-semibold">Action</th>
-                    <th scope="col" className="px-4 py-2 font-semibold">Record</th>
-                    <th scope="col" className="py-2 pl-4 font-semibold">IP address</th>
+                    <th scope="col" className="py-2 pr-4 font-semibold">
+                      When
+                    </th>
+                    <th scope="col" className="px-4 py-2 font-semibold">
+                      Action
+                    </th>
+                    <th scope="col" className="px-4 py-2 font-semibold">
+                      Record
+                    </th>
+                    <th scope="col" className="py-2 pl-4 font-semibold">
+                      IP address
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -122,7 +138,9 @@ export default async function UserPage({ params, searchParams }: { params: Promi
       ) : (
         <div className="max-w-3xl">
           <HistoryList rows={changes} empty="No changes recorded for this user yet." />
-          {changesTotal > 0 && <Pagination page={page} pageSize={pageSize} total={changesTotal} noun="changes" hrefFor={(p, size) => queryHref(base, { tab: 'changes' }, { page: p, size })} />}
+          {changesTotal > 0 && (
+            <Pagination page={page} pageSize={pageSize} total={changesTotal} noun="changes" hrefFor={(p, size) => queryHref(base, { tab: 'changes' }, { page: p, size })} />
+          )}
         </div>
       )}
     </div>

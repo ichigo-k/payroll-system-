@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
 import type { NavItem } from '@/lib/nav-items'
+import { cn } from '@/lib/utils'
 
 const HOME: NavItem = { label: 'Home', href: '/portal/self-service' }
 

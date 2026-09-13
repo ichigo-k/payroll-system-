@@ -56,7 +56,17 @@ export function payItemName(item: { type: string; description: string | null }, 
 // ---------------------------------------------------------------------------
 // Salary changes
 
-export const SALARY_CHANGE_REASONS = ['New hire', 'Promotion', 'Annual increment', 'Market adjustment', 'Cost of living adjustment', 'Probation confirmed', 'Correction', 'Demotion', 'Other'] as const
+export const SALARY_CHANGE_REASONS = [
+  'New hire',
+  'Promotion',
+  'Annual increment',
+  'Market adjustment',
+  'Cost of living adjustment',
+  'Probation confirmed',
+  'Correction',
+  'Demotion',
+  'Other',
+] as const
 
 /** Percentage change between two salaries, rounded to one decimal place. Null when there's no previous salary. */
 export function salaryChangePercent(previous: number | null | undefined, next: number) {
@@ -79,8 +89,7 @@ export type LineItems = { allowances: LineItem[]; deductions: LineItem[] }
 export function parseLineItems(json: string | null | undefined): LineItems {
   try {
     const value = JSON.parse(json ?? '{}')
-    const list = (items: unknown): LineItem[] =>
-      Array.isArray(items) ? items.filter((i): i is LineItem => !!i && typeof i.name === 'string' && typeof i.amount === 'number') : []
+    const list = (items: unknown): LineItem[] => (Array.isArray(items) ? items.filter((i): i is LineItem => !!i && typeof i.name === 'string' && typeof i.amount === 'number') : [])
     return { allowances: list(value?.allowances), deductions: list(value?.deductions) }
   } catch {
     return { allowances: [], deductions: [] }

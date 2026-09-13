@@ -10,9 +10,7 @@ export class GmailTransport implements EmailTransport {
     const pass = process.env.GMAIL_APP_PASSWORD
 
     if (!user || !pass) {
-      throw new Error(
-        `Gmail credentials missing. GMAIL_USER=${user ?? 'undefined'}, GMAIL_APP_PASSWORD=${pass ? '***' : 'undefined'}`
-      )
+      throw new Error(`Gmail credentials missing. GMAIL_USER=${user ?? 'undefined'}, GMAIL_APP_PASSWORD=${pass ? '***' : 'undefined'}`)
     }
 
     return nodemailer.createTransport({

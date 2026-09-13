@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Menu } from '@base-ui/react/menu'
 import { ChevronDown, Ellipsis } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
+import { Select } from '@/components/app/select'
 import { button, field } from '@/components/app/styles'
 import type { ActionResult } from '@/lib/access'
 import { OFFBOARDING_REASONS } from '@/lib/employee-rules'
+import { safeAction } from '@/lib/safe-action'
 import { cn } from '@/lib/utils'
 import { deleteEmployeeAction, offboardEmployeeAction, reinstateEmployeeAction } from './lifecycle-actions'
-import { Select } from '@/components/app/select'
-import { safeAction } from '@/lib/safe-action'
 
 const itemClass = 'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
 const dangerItem = cn(itemClass, 'text-danger data-highlighted:bg-danger-soft')
@@ -150,7 +150,12 @@ export function EmployeeRowActions({ employeeId, name, status, hasPay, payrollLi
             <span className="text-xs font-semibold text-muted-foreground">
               Reason<span className="ml-0.5 text-danger">*</span>
             </span>
-            <Select value={form.reason} onValueChange={(reason) => setForm((f) => ({ ...f, reason }))} placeholder="Choose a reason" options={OFFBOARDING_REASONS.map((r) => ({ value: r, label: r }))} />
+            <Select
+              value={form.reason}
+              onValueChange={(reason) => setForm((f) => ({ ...f, reason }))}
+              placeholder="Choose a reason"
+              options={OFFBOARDING_REASONS.map((r) => ({ value: r, label: r }))}
+            />
           </div>
           <label className="grid gap-1 sm:col-span-2">
             <span className="text-xs font-semibold text-muted-foreground">Note</span>
@@ -197,7 +202,17 @@ export function EmployeeRowActions({ employeeId, name, status, hasPay, payrollLi
               <button type="button" onClick={() => setConfirm(null)} className={button.subtle}>
                 Cancel
               </button>
-              <button type="button" disabled={pending} onClick={() => run(() => deleteEmployeeAction(employeeId), () => (variant === 'profile' ? router.push('/portal/financial/employees') : router.refresh()))} className={dangerButton}>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    () => deleteEmployeeAction(employeeId),
+                    () => (variant === 'profile' ? router.push('/portal/financial/employees') : router.refresh()),
+                  )
+                }
+                className={dangerButton}
+              >
                 {pending ? 'Deleting' : 'Delete permanently'}
               </button>
             </>

@@ -53,9 +53,7 @@ const isoMonth = (value: string) => (/^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? val
 
 export function parseFilters(raw: Raw): ExportFilters {
   const status = one(raw, 'status')
-  const departments = (Array.isArray(raw.department) ? raw.department : one(raw, 'department').split(','))
-    .map((d) => d.trim())
-    .filter(Boolean)
+  const departments = (Array.isArray(raw.department) ? raw.department : one(raw, 'department').split(',')).map((d) => d.trim()).filter(Boolean)
   const from = isoMonth(one(raw, 'from'))
   const to = isoMonth(one(raw, 'to'))
   return {
@@ -143,14 +141,12 @@ export function periodRange(filters: ExportFilters, now = new Date()) {
 export function runPeriodWhere(filters: ExportFilters, now = new Date()): Prisma.PayrollRunWhereInput {
   const { from, to } = periodRange(filters, now)
   return {
-    AND: [
-      { OR: [{ year: { gt: from.year } }, { year: from.year, month: { gte: from.month } }] },
-      { OR: [{ year: { lt: to.year } }, { year: to.year, month: { lte: to.month } }] },
-    ],
+    AND: [{ OR: [{ year: { gt: from.year } }, { year: from.year, month: { gte: from.month } }] }, { OR: [{ year: { lt: to.year } }, { year: to.year, month: { lte: to.month } }] }],
   }
 }
 
-const monthLabel = (ym: { year: number; month: number }) => new Date(Date.UTC(ym.year, ym.month - 1, 1)).toLocaleString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+const monthLabel = (ym: { year: number; month: number }) =>
+  new Date(Date.UTC(ym.year, ym.month - 1, 1)).toLocaleString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 
 /** Plain-English summary of the filters, printed on documents and shown above the preview. */
 export function describeFilters(filters: ExportFilters, { usesPeriod, usesYear, canSeePay }: { usesPeriod?: boolean; usesYear?: boolean; canSeePay?: boolean } = {}) {
@@ -165,8 +161,12 @@ export function describeFilters(filters: ExportFilters, { usesPeriod, usesYear, 
   if (age) parts.push(`aged ${age}`)
   const service = range(filters.serviceMin, filters.serviceMax, 'years of service')
   if (service) parts.push(`with ${service}`)
-  if (filters.joinedFrom || filters.joinedTo) parts.push(`joined ${filters.joinedFrom ? `from ${filters.joinedFrom}` : ''}${filters.joinedFrom && filters.joinedTo ? ' ' : ''}${filters.joinedTo ? `to ${filters.joinedTo}` : ''}`)
-  if (filters.leftFrom || filters.leftTo) parts.push(`left ${filters.leftFrom ? `from ${filters.leftFrom}` : ''}${filters.leftFrom && filters.leftTo ? ' ' : ''}${filters.leftTo ? `to ${filters.leftTo}` : ''}`)
+  if (filters.joinedFrom || filters.joinedTo)
+    parts.push(
+      `joined ${filters.joinedFrom ? `from ${filters.joinedFrom}` : ''}${filters.joinedFrom && filters.joinedTo ? ' ' : ''}${filters.joinedTo ? `to ${filters.joinedTo}` : ''}`,
+    )
+  if (filters.leftFrom || filters.leftTo)
+    parts.push(`left ${filters.leftFrom ? `from ${filters.leftFrom}` : ''}${filters.leftFrom && filters.leftTo ? ' ' : ''}${filters.leftTo ? `to ${filters.leftTo}` : ''}`)
   if (canSeePay) {
     const salary = range(filters.salaryMin, filters.salaryMax, 'basic salary')
     if (salary) parts.push(`earning ${salary}`)

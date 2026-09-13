@@ -1,19 +1,19 @@
+import type { LucideIcon } from 'lucide-react'
+import { ChartPie, FileBadge, History, Landmark, Receipt, TrendingUp, Users, Wallet } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChartPie, FileBadge, History, Landmark, Receipt, TrendingUp, Users, Wallet } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { can, currentUser } from '@/lib/access'
-import { listDepartments } from '@/lib/departments'
-import { describeFilters, type ExportFilters, filtersToQuery, parseFilters } from '@/lib/exports/filters'
-import { contextFor, isLarge } from '@/lib/exports/generate'
-import { type ReportDef, REPORTS } from '@/lib/exports/reports'
-import { prisma } from '@/lib/prisma'
-import { formatMoney } from '@/lib/currency'
 import { ListTabs } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button } from '@/components/app/styles'
+import { can, currentUser } from '@/lib/access'
+import { formatMoney } from '@/lib/currency'
+import { listDepartments } from '@/lib/departments'
+import { describeFilters, type ExportFilters, filtersToQuery, parseFilters } from '@/lib/exports/filters'
+import { contextFor, isLarge } from '@/lib/exports/generate'
+import { REPORTS, type ReportDef } from '@/lib/exports/reports'
+import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 import { DeleteSavedReport, ExportActions, FiltersForm } from './export-client'
 
@@ -64,7 +64,8 @@ function formatCell(value: string | number | null | undefined, kind?: string) {
 export default async function ExportsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await currentUser()
   const available = actor ? REPORTS.filter((r) => can(actor.role, r.permission)) : []
-  if (!actor || available.length === 0) return <NoPermission title="You can’t export reports" description="Exports are available to administrators, preparers, approvers and auditors." />
+  if (!actor || available.length === 0)
+    return <NoPermission title="You can’t export reports" description="Exports are available to administrators, preparers, approvers and auditors." />
 
   const raw = await searchParams
   const tab = raw.tab === 'history' ? 'history' : 'build'
@@ -113,7 +114,10 @@ export default async function ExportsPage({ searchParams }: { searchParams: Prom
                           <Link
                             href={`/portal/financial/exports?report=${r.key}`}
                             aria-current={active ? 'page' : undefined}
-                            className={cn('flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors duration-150', active ? 'bg-accent font-medium text-primary' : 'text-foreground hover:bg-secondary')}
+                            className={cn(
+                              'flex items-center gap-2.5 rounded-lg px-2 py-2 text-sm transition-colors duration-150',
+                              active ? 'bg-accent font-medium text-primary' : 'text-foreground hover:bg-secondary',
+                            )}
                           >
                             <Icon className={cn('size-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground')} strokeWidth={1.75} />
                             {r.label}
@@ -205,7 +209,13 @@ async function Preview({ report, ctx }: { report: ReportDef; ctx: ReturnType<typ
       )}
 
       <div className="sticky top-14 z-10 mt-4 border-y border-border bg-background py-3">
-        <ExportActions query={query} formats={report.formats} large={isLarge(report, size)} size={size} unit={report.kind === 'document' ? (size === 1 ? 'page' : 'pages') : size === 1 ? 'row' : 'rows'} />
+        <ExportActions
+          query={query}
+          formats={report.formats}
+          large={isLarge(report, size)}
+          size={size}
+          unit={report.kind === 'document' ? (size === 1 ? 'page' : 'pages') : size === 1 ? 'row' : 'rows'}
+        />
       </div>
 
       {shown.length === 0 ? (
@@ -285,11 +295,21 @@ async function HistoryTab({ userId }: { userId: string }) {
       <table className="w-full min-w-[760px] text-sm">
         <thead>
           <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-            <th scope="col" className="py-2 pr-4 font-semibold">Report</th>
-            <th scope="col" className="px-4 py-2 font-semibold">Format</th>
-            <th scope="col" className="px-4 py-2 text-right font-semibold">Rows</th>
-            <th scope="col" className="px-4 py-2 font-semibold">Status</th>
-            <th scope="col" className="px-4 py-2 font-semibold">When</th>
+            <th scope="col" className="py-2 pr-4 font-semibold">
+              Report
+            </th>
+            <th scope="col" className="px-4 py-2 font-semibold">
+              Format
+            </th>
+            <th scope="col" className="px-4 py-2 text-right font-semibold">
+              Rows
+            </th>
+            <th scope="col" className="px-4 py-2 font-semibold">
+              Status
+            </th>
+            <th scope="col" className="px-4 py-2 font-semibold">
+              When
+            </th>
             <th scope="col" className="py-2 pl-4">
               <span className="sr-only">Actions</span>
             </th>
@@ -298,7 +318,8 @@ async function HistoryTab({ userId }: { userId: string }) {
         <tbody>
           {exports.map((e) => {
             const expired = e.expiresAt && e.expiresAt < now
-            const status = e.status === 'PENDING' ? 'EXPORT_PENDING' : e.status === 'FAILED' ? 'EXPORT_FAILED' : expired ? 'EXPORT_EXPIRED' : e.expiresAt ? 'EXPORT_READY' : 'EXPORT_DOWNLOADED'
+            const status =
+              e.status === 'PENDING' ? 'EXPORT_PENDING' : e.status === 'FAILED' ? 'EXPORT_FAILED' : expired ? 'EXPORT_EXPIRED' : e.expiresAt ? 'EXPORT_READY' : 'EXPORT_DOWNLOADED'
             return (
               <tr key={e.id} className="border-b border-border align-top hover:bg-muted">
                 <td className="max-w-[420px] py-2.5 pr-4">

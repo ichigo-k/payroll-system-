@@ -1,27 +1,20 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Menu } from '@base-ui/react/menu'
 import { KeyRound } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
 import { button } from '@/components/app/styles'
 import type { ActionResult } from '@/lib/access'
 import { FINANCIAL_ROLES, ROLE_INFO, type RoleName } from '@/lib/roles'
-import { cn } from '@/lib/utils'
-import {
-  blockSelfServiceAction,
-  grantWorkspaceRoleAction,
-  removeWorkspaceAccessAction,
-  sendSelfServiceWelcomeAction,
-  unblockSelfServiceAction,
-} from '../users/actions'
-import { RolePicker } from '../users/role-picker'
 import { safeAction } from '@/lib/safe-action'
+import { cn } from '@/lib/utils'
+import { blockSelfServiceAction, grantWorkspaceRoleAction, removeWorkspaceAccessAction, sendSelfServiceWelcomeAction, unblockSelfServiceAction } from '../users/actions'
+import { RolePicker } from '../users/role-picker'
 
-const itemClass =
-  'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
+const itemClass = 'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
 
 type Confirm = 'role' | 'remove-role' | 'block' | null
 

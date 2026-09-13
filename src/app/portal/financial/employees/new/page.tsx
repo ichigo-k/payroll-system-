@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
+import { NoPermission } from '@/components/app/no-permission'
+import { PageHeader } from '@/components/app/page-header'
 import { requirePermission } from '@/lib/access'
 import { listDepartments } from '@/lib/departments'
-import { PageHeader } from '@/components/app/page-header'
-import { NoPermission } from '@/components/app/no-permission'
 import { EmployeeForm } from '../employee-form'
 
 export const metadata: Metadata = { title: 'Add employee' }

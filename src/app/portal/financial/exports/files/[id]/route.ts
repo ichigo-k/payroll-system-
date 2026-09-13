@@ -8,7 +8,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!actor) return new Response('Sign in to download exports.', { status: 401 })
   const { id } = await params
 
-  const report = await prisma.report.findFirst({ where: { id, generatedById: actor.id }, select: { id: true, title: true, status: true, content: true, fileFormat: true, expiresAt: true, generatedAt: true } })
+  const report = await prisma.report.findFirst({
+    where: { id, generatedById: actor.id },
+    select: { id: true, title: true, status: true, content: true, fileFormat: true, expiresAt: true, generatedAt: true },
+  })
   if (!report || report.status !== 'READY' || !report.content) return new Response('That export isn’t available.', { status: 404 })
   if (report.expiresAt && report.expiresAt < new Date()) return new Response('That export has expired. Run it again from the export centre.', { status: 410 })
 

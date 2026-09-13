@@ -1,25 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Menu } from '@base-ui/react/menu'
 import { Check, ChevronDown, RefreshCw, Send, Undo2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
+import { Select } from '@/components/app/select'
 import { button, field } from '@/components/app/styles'
 import type { ActionResult } from '@/lib/access'
-import { cn } from '@/lib/utils'
-import {
-  approveRunAction,
-  deleteDraftAction,
-  markPaidAction,
-  recalculateRunAction,
-  recallRunAction,
-  requestChangesAction,
-  submitRunAction,
-} from '../actions'
-import { Select } from '@/components/app/select'
 import { safeAction } from '@/lib/safe-action'
+import { cn } from '@/lib/utils'
+import { approveRunAction, deleteDraftAction, markPaidAction, recalculateRunAction, recallRunAction, requestChangesAction, submitRunAction } from '../actions'
 
 type DialogKind = 'submit' | 'approve' | 'changes' | 'paid' | 'delete' | 'recall' | null
 
@@ -111,7 +103,10 @@ export function RunActions(props: RunActionsProps) {
           <Menu.Portal>
             <Menu.Positioner sideOffset={4} align="end" className="z-40 outline-none">
               <Menu.Popup className="w-48 origin-(--transform-origin) rounded-lg border border-border bg-popover p-1 shadow-[0_8px_12px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.31)] transition-[opacity,transform] duration-150 ease-out outline-none data-ending-style:scale-[0.97] data-ending-style:opacity-0 data-starting-style:scale-[0.97] data-starting-style:opacity-0">
-                <Menu.Item onClick={() => open('delete')} className="flex cursor-default items-center rounded-md px-2 py-1.5 text-sm text-danger outline-none data-highlighted:bg-danger-soft">
+                <Menu.Item
+                  onClick={() => open('delete')}
+                  className="flex cursor-default items-center rounded-md px-2 py-1.5 text-sm text-danger outline-none data-highlighted:bg-danger-soft"
+                >
                   Delete draft
                 </Menu.Item>
               </Menu.Popup>
@@ -153,7 +148,10 @@ export function RunActions(props: RunActionsProps) {
             aria-label="Reviewer"
             value={reviewerId}
             onValueChange={setReviewerId}
-            options={[{ value: '', label: 'Notify all approvers', description: 'Anyone can pick it up' }, ...props.approvers.map((a) => ({ value: a.id, label: a.name, description: 'Gets a direct request' }))]}
+            options={[
+              { value: '', label: 'Notify all approvers', description: 'Anyone can pick it up' },
+              ...props.approvers.map((a) => ({ value: a.id, label: a.name, description: 'Gets a direct request' })),
+            ]}
           />
           <span className="text-xs text-subtlest">They get a direct request. Any approver can still approve, as your approval policy requires.</span>
         </div>
@@ -267,7 +265,12 @@ export function RunActions(props: RunActionsProps) {
             <button
               type="button"
               disabled={pending}
-              onClick={() => run(() => deleteDraftAction(runId), () => router.push('/portal/financial/payroll'))}
+              onClick={() =>
+                run(
+                  () => deleteDraftAction(runId),
+                  () => router.push('/portal/financial/payroll'),
+                )
+              }
               className={cn(button.primary, 'bg-danger hover:bg-[#C9372C] active:bg-[#AE2E24]')}
             >
               {pending ? 'Deleting' : 'Delete draft'}

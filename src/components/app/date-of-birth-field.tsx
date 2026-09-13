@@ -34,7 +34,9 @@ export function DateOfBirthField({ id, name, defaultValue = '', invalid }: { id:
         )}
       </div>
       {retiresIn !== null && age !== null && age >= RETIREMENT_AGE - 1 && (
-        <p className="text-xs text-warning">{age >= RETIREMENT_AGE ? `Already past the SSNIT retirement age of ${RETIREMENT_AGE}.` : `Reaches the SSNIT retirement age of ${RETIREMENT_AGE} soon.`}</p>
+        <p className="text-xs text-warning">
+          {age >= RETIREMENT_AGE ? `Already past the SSNIT retirement age of ${RETIREMENT_AGE}.` : `Reaches the SSNIT retirement age of ${RETIREMENT_AGE} soon.`}
+        </p>
       )}
     </div>
   )

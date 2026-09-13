@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { type ActionResult, requirePermission } from '@/lib/access'
-import type { Permission } from '@/lib/permissions'
 import * as runs from '@/lib/payroll-runs'
+import type { Permission } from '@/lib/permissions'
 
 const denied = (what: string): ActionResult => ({ ok: false, message: `You don’t have permission to ${what}.` })
 

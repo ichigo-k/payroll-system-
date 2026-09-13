@@ -1,18 +1,18 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
 import type { PayrollStatus, Prisma } from '@prisma/client'
 import { Plus } from 'lucide-react'
-import { can, requirePermission } from '@/lib/access'
-import { parsePage } from '@/lib/pagination'
-import { formatCurrency } from '@/lib/payroll'
-import { periodLabel } from '@/lib/payroll-runs'
-import { prisma } from '@/lib/prisma'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { ListTabs, queryHref } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button, link } from '@/components/app/styles'
+import { can, requirePermission } from '@/lib/access'
+import { parsePage } from '@/lib/pagination'
+import { formatCurrency } from '@/lib/payroll'
+import { periodLabel } from '@/lib/payroll-runs'
+import { prisma } from '@/lib/prisma'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Payroll runs' }
@@ -74,14 +74,22 @@ export default async function PayrollRunsPage({ searchParams }: { searchParams: 
 
       <ListTabs
         label="Payroll views"
-        tabs={keys.map((key, i) => ({ key, label: VIEWS[key].label, count: counts[i], active: key === view, href: queryHref('/portal/financial/payroll', current, { view: key === 'all' ? undefined : key }) }))}
+        tabs={keys.map((key, i) => ({
+          key,
+          label: VIEWS[key].label,
+          count: counts[i],
+          active: key === view,
+          href: queryHref('/portal/financial/payroll', current, { view: key === 'all' ? undefined : key }),
+        }))}
       />
 
       {runs.length === 0 ? (
         <div className="mt-6 rounded-lg border border-dashed border-input px-6 py-14 text-center">
           <p className="text-base font-semibold">{view === 'all' ? 'No payroll runs yet' : `No runs in ${VIEWS[view].label.toLowerCase()}`}</p>
           <p className="mx-auto mt-1 max-w-[52ch] text-sm text-muted-foreground">
-            {can(actor.role, 'payroll.prepare') ? 'Start a run for a pay period. We’ll calculate pay for everyone with a salary set up.' : 'Runs appear here once a preparer starts one.'}
+            {can(actor.role, 'payroll.prepare')
+              ? 'Start a run for a pay period. We’ll calculate pay for everyone with a salary set up.'
+              : 'Runs appear here once a preparer starts one.'}
           </p>
           {view !== 'all' && (
             <Link href="/portal/financial/payroll" className={cn(link, 'mt-3 inline-block text-sm')}>
@@ -95,12 +103,24 @@ export default async function PayrollRunsPage({ searchParams }: { searchParams: 
             <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-4 font-semibold">Period</th>
-                  <th scope="col" className="px-4 py-2 font-semibold">Status</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Employees</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Net pay</th>
-                  <th scope="col" className="px-4 py-2 font-semibold">Prepared by</th>
-                  <th scope="col" className="px-4 py-2 font-semibold">Last update</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    Period
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-semibold">
+                    Status
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Employees
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Net pay
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-semibold">
+                    Prepared by
+                  </th>
+                  <th scope="col" className="px-4 py-2 font-semibold">
+                    Last update
+                  </th>
                 </tr>
               </thead>
               <tbody>

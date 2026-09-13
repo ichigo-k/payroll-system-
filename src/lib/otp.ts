@@ -1,4 +1,4 @@
-import { randomInt } from 'crypto'
+import { randomInt } from 'node:crypto'
 
 /**
  * Generates a cryptographically random 6-digit numeric OTP string.

@@ -1,11 +1,11 @@
+import { TriangleAlert } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { TriangleAlert } from 'lucide-react'
-import { requirePermission } from '@/lib/access'
-import { prisma } from '@/lib/prisma'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { link } from '@/components/app/styles'
+import { requirePermission } from '@/lib/access'
+import { prisma } from '@/lib/prisma'
 import { NewRunForm } from './new-run-form'
 
 export const metadata: Metadata = { title: 'New payroll run' }

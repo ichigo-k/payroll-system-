@@ -1,19 +1,19 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
 import type { Prisma } from '@prisma/client'
 import { ArrowDown, ArrowUp, Plus, Search, Upload } from 'lucide-react'
-import { can, requirePermission } from '@/lib/access'
+import type { Metadata } from 'next'
+import Link from 'next/link'
 import { NoPermission } from '@/components/app/no-permission'
-import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button, field, link } from '@/components/app/styles'
+import { can, requirePermission } from '@/lib/access'
+import { formatCurrency } from '@/lib/payroll'
+import { prisma } from '@/lib/prisma'
+import { ROLE_INFO } from '@/lib/roles'
+import { selfServiceState } from '@/lib/user-rules'
 import { cn } from '@/lib/utils'
 import { EmployeeAccessActions } from './access-actions'
 import { EmployeeRowActions } from './employee-row-actions'
-import { formatCurrency } from '@/lib/payroll'
-import { ROLE_INFO } from '@/lib/roles'
-import { selfServiceState } from '@/lib/user-rules'
 
 const SELF_SERVICE_BADGE = { 'signed-in': 'SIGNED_IN', available: 'AVAILABLE', blocked: 'BLOCKED', unavailable: 'NO_ACCESS' } as const
 
@@ -99,7 +99,12 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
       orderBy: SORTS[params.sort].orderBy(params.dir),
       include: {
         user: { select: { status: true, lastLogin: true, role: true } },
-        salaryConfigs: { where: { effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] }, orderBy: { effectiveFrom: 'desc' }, take: 1, select: { baseSalary: true } },
+        salaryConfigs: {
+          where: { effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] },
+          orderBy: { effectiveFrom: 'desc' },
+          take: 1,
+          select: { baseSalary: true },
+        },
         _count: { select: { payrollDetails: true } },
       },
       take: 200,
@@ -138,8 +143,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         }
       />
 
-
-      <nav aria-label="List views" className="flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-2px_0_var(--border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="List views"
+        className="flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-2px_0_var(--border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {viewKeys.map((key) => {
           const active = key === params.view
           return (
@@ -222,7 +229,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                     >
                       <Link
                         href={hrefWith(params, { sort: key, dir: nextDir })}
-                        className={cn('group -mx-1 inline-flex h-9 items-center gap-1 rounded px-1 transition-colors duration-150 hover:bg-secondary hover:text-foreground', active && 'text-foreground')}
+                        className={cn(
+                          'group -mx-1 inline-flex h-9 items-center gap-1 rounded px-1 transition-colors duration-150 hover:bg-secondary hover:text-foreground',
+                          active && 'text-foreground',
+                        )}
                       >
                         {SORTS[key].label}
                         <Arrow className={cn('size-3.5', active ? 'opacity-100' : 'opacity-0 group-hover:opacity-60')} />
@@ -271,9 +281,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                   </td>
                   <td className="num px-4 py-2 font-mono text-xs text-foreground">{employee.employeeId}</td>
                   <td className="px-4 py-2 text-foreground">{employee.department}</td>
-                  <td className="num px-4 py-2 text-foreground">
-                    {employee.startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </td>
+                  <td className="num px-4 py-2 text-foreground">{employee.startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                   {canSeePay && (
                     <td className="num px-4 py-2 text-right">
                       {employee.salaryConfigs[0] ? (
@@ -281,7 +289,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                       ) : employee.employmentStatus === 'TERMINATED' ? (
                         <span className="text-subtlest">-</span>
                       ) : canEditPay ? (
-                        <Link href={`/portal/financial/employees/${employee.id}?tab=pay&edit=salary`} className="inline-flex h-6 items-center rounded-[3px] bg-warning-soft px-1.5 font-sans text-xs font-semibold text-warning hover:underline">
+                        <Link
+                          href={`/portal/financial/employees/${employee.id}?tab=pay&edit=salary`}
+                          className="inline-flex h-6 items-center rounded-[3px] bg-warning-soft px-1.5 font-sans text-xs font-semibold text-warning hover:underline"
+                        >
                           Set up pay
                         </Link>
                       ) : (
@@ -292,14 +303,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                   <td className="px-4 py-2">
                     <StatusBadge status={employee.employmentStatus} />
                     {employee.employmentStatus === 'TERMINATED' && employee.endDate && (
-                      <span className="mt-0.5 block text-xs text-muted-foreground">Left {employee.endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        Left {employee.endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2">
                     <StatusBadge status={SELF_SERVICE_BADGE[selfServiceState(employee)]} />
-                    {employee.user && employee.user.role !== 'EMPLOYEE' && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">{ROLE_INFO[employee.user.role].label}</span>
-                    )}
+                    {employee.user && employee.user.role !== 'EMPLOYEE' && <span className="ml-1.5 text-xs text-muted-foreground">{ROLE_INFO[employee.user.role].label}</span>}
                   </td>
                   {(canEdit || canEditPay) && (
                     <td className="py-2 pl-2 text-right">

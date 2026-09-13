@@ -1,18 +1,18 @@
+import { TriangleAlert } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { TriangleAlert } from 'lucide-react'
+import { NoPermission } from '@/components/app/no-permission'
+import { OnboardingChecklist } from '@/components/app/onboarding-checklist'
+import { PageHeader } from '@/components/app/page-header'
+import { StatusBadge } from '@/components/app/status-badge'
+import { button, link } from '@/components/app/styles'
 import { can, requirePermission } from '@/lib/access'
 import { ACTION_LABELS, actorName, ENTITY_LABELS } from '@/lib/audit-format'
+import { type ChecklistView, getChecklist } from '@/lib/checklists'
 import { formatCurrency } from '@/lib/payroll'
 import { periodLabel } from '@/lib/payroll-runs'
 import { prisma } from '@/lib/prisma'
 import { ROLE_INFO } from '@/lib/roles'
-import { NoPermission } from '@/components/app/no-permission'
-import { PageHeader } from '@/components/app/page-header'
-import { StatusBadge } from '@/components/app/status-badge'
-import { button, link } from '@/components/app/styles'
-import { OnboardingChecklist } from '@/components/app/onboarding-checklist'
-import { type ChecklistView, getChecklist } from '@/lib/checklists'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Home' }
@@ -35,7 +35,17 @@ function Stat({ label, value, href, attention }: { label: string; value: string;
   )
 }
 
-function RunList({ title, runs, empty, action }: { title: string; runs: { id: string; month: number; year: number; status: string; headcount: number; totalNetPay: unknown; note?: string }[]; empty: string; action?: React.ReactNode }) {
+function RunList({
+  title,
+  runs,
+  empty,
+  action,
+}: {
+  title: string
+  runs: { id: string; month: number; year: number; status: string; headcount: number; totalNetPay: unknown; note?: string }[]
+  empty: string
+  action?: React.ReactNode
+}) {
   return (
     <section aria-label={title}>
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -113,12 +123,22 @@ async function PreparerHome({ checklist }: { checklist: ChecklistView | null }) 
   const [activeEmployees, withSalary, drafts, submitted, sentBack, latest] = await Promise.all([
     prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
     prisma.employee.count({ where: { employmentStatus: 'ACTIVE', salaryConfigs: { some: {} } } }),
-    prisma.payrollRun.findMany({ where: { status: 'DRAFT' }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 5, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true, submissionRound: true, rejectionReason: true } }),
+    prisma.payrollRun.findMany({
+      where: { status: 'DRAFT' },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 5,
+      select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true, submissionRound: true, rejectionReason: true },
+    }),
     prisma.payrollRun.count({ where: { status: 'SUBMITTED' } }),
     prisma.payrollRun.count({ where: { status: 'DRAFT', submissionRound: { gt: 0 } } }),
     prisma.payrollRun.findFirst({ where: { status: { in: ['APPROVED', 'PAID'] } }, orderBy: [{ year: 'desc' }, { month: 'desc' }] }),
   ])
-  const approvedToPay = await prisma.payrollRun.findMany({ where: { status: 'APPROVED' }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 3, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true } })
+  const approvedToPay = await prisma.payrollRun.findMany({
+    where: { status: 'APPROVED' },
+    orderBy: [{ year: 'desc' }, { month: 'desc' }],
+    take: 3,
+    select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true },
+  })
 
   return (
     <>
@@ -148,9 +168,7 @@ async function PreparerHome({ checklist }: { checklist: ChecklistView | null }) 
             </p>
           )}
         </div>
-        <div className="xl:border-l xl:border-border xl:pl-8">
-          {checklist && <OnboardingChecklist checklist={checklist} />}
-        </div>
+        <div className="xl:border-l xl:border-border xl:pl-8">{checklist && <OnboardingChecklist checklist={checklist} />}</div>
       </div>
     </>
   )
@@ -161,11 +179,27 @@ async function ApproverHome({ userId, checklist }: { userId: string; checklist: 
     prisma.payrollRun.findMany({
       where: { status: 'SUBMITTED' },
       orderBy: { submittedAt: 'asc' },
-      select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true, submittedById: true, requestedReviewerId: true, submissionRound: true, decisions: { select: { userId: true, round: true } } },
+      select: {
+        id: true,
+        month: true,
+        year: true,
+        status: true,
+        headcount: true,
+        totalNetPay: true,
+        submittedById: true,
+        requestedReviewerId: true,
+        submissionRound: true,
+        decisions: { select: { userId: true, round: true } },
+      },
     }),
     prisma.taxConfiguration.count({ where: { OR: [{ approvedAt: null }, { pendingChanges: { not: null } }] } }),
     prisma.payrollRun.count({ where: { status: { in: ['APPROVED', 'PAID'] }, year: new Date().getFullYear() } }),
-    prisma.payrollRun.findMany({ where: { status: { in: ['APPROVED', 'PAID'] } }, orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 4, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true } }),
+    prisma.payrollRun.findMany({
+      where: { status: { in: ['APPROVED', 'PAID'] } },
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 4,
+      select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true },
+    }),
   ])
   const needsYou = waiting.filter((r) => r.submittedById !== userId && !r.decisions.some((d) => d.userId === userId && d.round === r.submissionRound))
 
@@ -179,12 +213,12 @@ async function ApproverHome({ userId, checklist }: { userId: string; checklist: 
       </dl>
       <div className="mt-8 grid gap-10 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid content-start gap-8">
-        <RunList
-          title="Needs your review"
-          empty="Nothing waiting. You’ll get a notification and an email when a run is submitted."
-          runs={needsYou.map((r) => ({ ...r, note: r.requestedReviewerId === userId ? 'Review requested from you' : `${r.headcount} employees` }))}
-        />
-        <RunList title="Recently approved" empty="No approved runs yet." runs={recent} />
+          <RunList
+            title="Needs your review"
+            empty="Nothing waiting. You’ll get a notification and an email when a run is submitted."
+            runs={needsYou.map((r) => ({ ...r, note: r.requestedReviewerId === userId ? 'Review requested from you' : `${r.headcount} employees` }))}
+          />
+          <RunList title="Recently approved" empty="No approved runs yet." runs={recent} />
         </div>
         <div className="xl:border-l xl:border-border xl:pl-8">{checklist && <OnboardingChecklist checklist={checklist} />}</div>
       </div>
@@ -198,7 +232,12 @@ async function AdminHome({ checklist }: { checklist: ChecklistView | null }) {
     prisma.user.count({ where: { status: 'active', lastLogin: null, role: { not: 'EMPLOYEE' } } }),
     prisma.user.count({ where: { status: { not: 'active' } } }),
     prisma.user.count({ where: { role: 'APPROVER', status: 'active' } }),
-    prisma.auditLog.findMany({ where: { action: { notIn: ['LOGIN', 'LOGOUT'] } }, include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } }, orderBy: { timestamp: 'desc' }, take: 8 }),
+    prisma.auditLog.findMany({
+      where: { action: { notIn: ['LOGIN', 'LOGOUT'] } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      orderBy: { timestamp: 'desc' },
+      take: 8,
+    }),
   ])
   const count = (role: string) => byRole.find((r) => r.role === role)?._count ?? 0
   const preparers = count('PREPARER')
@@ -227,7 +266,8 @@ async function AdminHome({ checklist }: { checklist: ChecklistView | null }) {
               {events.map((e) => (
                 <li key={e.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
                   <span>
-                    <span className="font-medium">{actorName(e.user)}</span> <span className="text-muted-foreground">{(ACTION_LABELS[e.action] ?? e.action).toLowerCase()}</span> {(ENTITY_LABELS[e.entityType] ?? e.entityType).toLowerCase()}
+                    <span className="font-medium">{actorName(e.user)}</span> <span className="text-muted-foreground">{(ACTION_LABELS[e.action] ?? e.action).toLowerCase()}</span>{' '}
+                    {(ENTITY_LABELS[e.entityType] ?? e.entityType).toLowerCase()}
                   </span>
                   <span className="num shrink-0 text-xs text-subtlest">{dateTime(e.timestamp)}</span>
                 </li>
@@ -251,7 +291,11 @@ async function AdminHome({ checklist }: { checklist: ChecklistView | null }) {
 
 async function AuditorHome({ checklist }: { checklist: ChecklistView | null }) {
   const [runs, exports, events] = await Promise.all([
-    prisma.payrollRun.findMany({ orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 5, select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true } }),
+    prisma.payrollRun.findMany({
+      orderBy: [{ year: 'desc' }, { month: 'desc' }],
+      take: 5,
+      select: { id: true, month: true, year: true, status: true, headcount: true, totalNetPay: true },
+    }),
     prisma.report.count(),
     prisma.auditLog.count({ where: { timestamp: { gte: new Date(Date.now() - 30 * 86_400_000) } } }),
   ])

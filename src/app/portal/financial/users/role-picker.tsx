@@ -33,15 +33,7 @@ export function RolePicker({
               disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent',
             )}
           >
-            <input
-              type="radio"
-              name={name}
-              value={role}
-              checked={checked}
-              disabled={disabled}
-              onChange={() => onChange(role)}
-              className="mt-0.5 size-4 accent-primary"
-            />
+            <input type="radio" name={name} value={role} checked={checked} disabled={disabled} onChange={() => onChange(role)} className="mt-0.5 size-4 accent-primary" />
             <span className="min-w-0">
               <span className="block text-sm font-medium text-foreground">{ROLE_INFO[role].label}</span>
               <span className="block text-xs text-muted-foreground">{note ?? ROLE_INFO[role].summary}</span>

@@ -1,12 +1,12 @@
 'use client'
 
-import { useActionState, useState } from 'react'
 import { CircleAlert, CircleCheck, Plus, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { button, field } from '@/components/app/styles'
-import { saveTaxConfiguration, type TaxActionState } from './actions'
+import { useActionState, useState } from 'react'
 import { Select } from '@/components/app/select'
+import { button, field } from '@/components/app/styles'
 import { activeCurrency } from '@/lib/currency'
+import { cn } from '@/lib/utils'
+import { saveTaxConfiguration, type TaxActionState } from './actions'
 
 export type TaxFormValues = {
   year: number
@@ -74,9 +74,7 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
   )
   const disabled = !canEdit || pending
 
-  const serialized = JSON.stringify(
-    brackets.map((b) => ({ min: Number(b.min), max: b.max === '' ? NO_UPPER_LIMIT : Number(b.max), rate: Number(b.rate) / 100 })),
-  )
+  const serialized = JSON.stringify(brackets.map((b) => ({ min: Number(b.min), max: b.max === '' ? NO_UPPER_LIMIT : Number(b.max), rate: Number(b.rate) / 100 })))
 
   function update(index: number, key: 'min' | 'max' | 'rate', value: string) {
     setBrackets((rows) => rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)))
@@ -100,7 +98,13 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
             <input name="year" type="number" min="2000" max="2100" required defaultValue={values.year} disabled={disabled} className={cn(inputClass, 'num')} />
           </Field>
           <Field label="Applies to">
-            <Select name="month" aria-label="Applies to" defaultValue={String(values.month)} disabled={disabled} options={MONTHS.map((label, index) => ({ value: String(index), label }))} />
+            <Select
+              name="month"
+              aria-label="Applies to"
+              defaultValue={String(values.month)}
+              disabled={disabled}
+              options={MONTHS.map((label, index) => ({ value: String(index), label }))}
+            />
           </Field>
           <label className="flex items-center gap-2 self-end pb-1.5 text-sm text-foreground">
             <input name="isActive" type="checkbox" defaultChecked={values.isActive} disabled={disabled} className="size-4 accent-primary" />
@@ -114,10 +118,18 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
           <table className="w-full min-w-[480px] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
-                <th scope="col" className="pb-1.5 font-medium">From ({activeCurrency()})</th>
-                <th scope="col" className="pb-1.5 pl-2 font-medium">To ({activeCurrency()})</th>
-                <th scope="col" className="w-28 pb-1.5 pl-2 font-medium">Rate</th>
-                <th scope="col" className="w-9 pb-1.5"><span className="sr-only">Remove</span></th>
+                <th scope="col" className="pb-1.5 font-medium">
+                  From ({activeCurrency()})
+                </th>
+                <th scope="col" className="pb-1.5 pl-2 font-medium">
+                  To ({activeCurrency()})
+                </th>
+                <th scope="col" className="w-28 pb-1.5 pl-2 font-medium">
+                  Rate
+                </th>
+                <th scope="col" className="w-9 pb-1.5">
+                  <span className="sr-only">Remove</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -125,14 +137,45 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
                 // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id and are only appended or removed
                 <tr key={index}>
                   <td className="py-1">
-                    <input aria-label={`Bracket ${index + 1} from`} type="number" min="0" step="0.01" required value={row.min} onChange={(e) => update(index, 'min', e.target.value)} disabled={disabled} className={cn(inputClass, 'num text-right')} />
+                    <input
+                      aria-label={`Bracket ${index + 1} from`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      value={row.min}
+                      onChange={(e) => update(index, 'min', e.target.value)}
+                      disabled={disabled}
+                      className={cn(inputClass, 'num text-right')}
+                    />
                   </td>
                   <td className="py-1 pl-2">
-                    <input aria-label={`Bracket ${index + 1} to`} type="number" min="0" step="0.01" value={row.max} placeholder="No limit" onChange={(e) => update(index, 'max', e.target.value)} disabled={disabled} className={cn(inputClass, 'num text-right placeholder:text-muted-foreground')} />
+                    <input
+                      aria-label={`Bracket ${index + 1} to`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={row.max}
+                      placeholder="No limit"
+                      onChange={(e) => update(index, 'max', e.target.value)}
+                      disabled={disabled}
+                      className={cn(inputClass, 'num text-right placeholder:text-muted-foreground')}
+                    />
                   </td>
                   <td className="py-1 pl-2">
                     <span className="relative block">
-                      <input aria-label={`Bracket ${index + 1} rate`} type="number" min="0" max="100" step="0.01" required value={row.rate} onChange={(e) => update(index, 'rate', e.target.value)} disabled={disabled} className={cn(inputClass, 'num pr-7 text-right')} />
+                      <input
+                        aria-label={`Bracket ${index + 1} rate`}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        required
+                        value={row.rate}
+                        onChange={(e) => update(index, 'rate', e.target.value)}
+                        disabled={disabled}
+                        className={cn(inputClass, 'num pr-7 text-right')}
+                      />
                       <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-muted-foreground">%</span>
                     </span>
                   </td>
@@ -204,11 +247,7 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
               </p>
             )}
           </div>
-          <button
-            type="submit"
-            disabled={pending}
-            className={button.primary}
-          >
+          <button type="submit" disabled={pending} className={button.primary}>
             {pending ? 'Saving' : submitLabel}
           </button>
         </div>

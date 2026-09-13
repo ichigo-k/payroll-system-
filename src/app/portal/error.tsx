@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { RotateCcw, WifiOff } from 'lucide-react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { button } from '@/components/app/styles'
 
 /** Friendly fallback for anything that fails while loading a portal page, such as the database being briefly unreachable. */

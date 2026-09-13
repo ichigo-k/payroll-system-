@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Bookmark, Download, Eye, LoaderCircle, RotateCcw, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { CountryCombobox } from '@/components/app/country-combobox'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
@@ -10,9 +10,9 @@ import { Select } from '@/components/app/select'
 import { button, field } from '@/components/app/styles'
 import type { ExportFilters } from '@/lib/exports/filters'
 import { MISSING_OPTIONS } from '@/lib/exports/filters'
+import { safeAction } from '@/lib/safe-action'
 import { cn } from '@/lib/utils'
 import { deleteSavedReportAction, prepareExportAction, saveReportAction } from './actions'
-import { safeAction } from '@/lib/safe-action'
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="text-xs font-semibold text-muted-foreground">{children}</span>
@@ -124,7 +124,13 @@ export function FiltersForm({
                   ['all', 'Everyone'],
                 ] as const
               ).map(([value, label]) => (
-                <label key={value} className={cn('flex flex-1 cursor-pointer items-center justify-center rounded-[4px] text-sm transition-colors duration-150', status === value ? 'bg-accent font-medium text-primary' : 'text-muted-foreground hover:bg-secondary')}>
+                <label
+                  key={value}
+                  className={cn(
+                    'flex flex-1 cursor-pointer items-center justify-center rounded-[4px] text-sm transition-colors duration-150',
+                    status === value ? 'bg-accent font-medium text-primary' : 'text-muted-foreground hover:bg-secondary',
+                  )}
+                >
                   <input type="radio" name="status" value={value} checked={status === value} onChange={() => setStatus(value)} className="sr-only" />
                   {label}
                 </label>
@@ -160,7 +166,12 @@ export function FiltersForm({
 
           <div className="grid gap-1">
             <FieldLabel>Missing details</FieldLabel>
-            <Select name="missing" aria-label="Missing details" defaultValue={filters.missing} options={[{ value: '', label: 'Don’t filter' }, ...MISSING_OPTIONS.map((m) => ({ value: m.value, label: `Missing ${m.label.toLowerCase()}` }))]} />
+            <Select
+              name="missing"
+              aria-label="Missing details"
+              defaultValue={filters.missing}
+              options={[{ value: '', label: 'Don’t filter' }, ...MISSING_OPTIONS.map((m) => ({ value: m.value, label: `Missing ${m.label.toLowerCase()}` }))]}
+            />
           </div>
 
           {departments.length > 0 && (
@@ -226,7 +237,11 @@ export function ExportActions({ query, formats, large, size, unit }: { query: st
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-muted-foreground">
-        {size === 0 ? 'Nothing to export with these filters.' : large ? `${size.toLocaleString('en-GB')} ${unit}: large exports are prepared in the background.` : `${size.toLocaleString('en-GB')} ${unit} ready to export.`}
+        {size === 0
+          ? 'Nothing to export with these filters.'
+          : large
+            ? `${size.toLocaleString('en-GB')} ${unit}: large exports are prepared in the background.`
+            : `${size.toLocaleString('en-GB')} ${unit} ready to export.`}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setSaving(true)} className={button.subtle}>

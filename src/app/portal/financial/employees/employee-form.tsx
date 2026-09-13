@@ -1,19 +1,19 @@
 'use client'
 
-import { useActionState, useEffect, useRef } from 'react'
+import { CircleAlert } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CircleAlert } from 'lucide-react'
+import { useActionState, useEffect, useRef } from 'react'
 import { BankCombobox } from '@/components/app/bank-combobox'
 import { CountryCombobox } from '@/components/app/country-combobox'
 import { DateOfBirthField } from '@/components/app/date-of-birth-field'
-import { GenderSelect } from '@/components/app/gender-select'
 import { DepartmentCombobox } from '@/components/app/department-combobox'
 import { useFlags } from '@/components/app/flags'
+import { GenderSelect } from '@/components/app/gender-select'
+import { Select } from '@/components/app/select'
 import { button, field } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { type ActionState, createEmployee, updateEmployee } from './actions'
-import { Select } from '@/components/app/select'
 
 const initialState: ActionState = { status: 'idle' }
 
@@ -99,7 +99,13 @@ export function EmployeeForm({ departments, initial, employeeId }: { departments
         <Field label="Phone" htmlFor="phone">
           <input id="phone" name="phone" defaultValue={values.phone} type="tel" autoComplete="off" placeholder="+233" className={field} />
         </Field>
-        <Field label="Date of birth" htmlFor="dateOfBirth" required={!editing} error={errors.dateOfBirth} hint="Used for SSNIT and retirement age. Only administrators see the full date.">
+        <Field
+          label="Date of birth"
+          htmlFor="dateOfBirth"
+          required={!editing}
+          error={errors.dateOfBirth}
+          hint="Used for SSNIT and retirement age. Only administrators see the full date."
+        >
           <DateOfBirthField id="dateOfBirth" name="dateOfBirth" defaultValue={values.dateOfBirth} invalid={!!errors.dateOfBirth} />
         </Field>
         <Field label="Gender" htmlFor="gender" error={errors.gender}>
@@ -134,7 +140,11 @@ export function EmployeeForm({ departments, initial, employeeId }: { departments
             htmlFor="employmentStatus"
             required
             error={errors.employmentStatus}
-            hint={values.employmentStatus === 'TERMINATED' ? 'This person has left. Use Reinstate on their profile to bring them back.' : 'Only active employees are paid. To record someone leaving, use Offboard on their profile.'}
+            hint={
+              values.employmentStatus === 'TERMINATED'
+                ? 'This person has left. Use Reinstate on their profile to bring them back.'
+                : 'Only active employees are paid. To record someone leaving, use Offboard on their profile.'
+            }
           >
             {values.employmentStatus === 'TERMINATED' ? (
               <Select id="employmentStatus" disabled value="TERMINATED" options={[{ value: 'TERMINATED', label: 'Left the company' }]} />

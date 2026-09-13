@@ -14,13 +14,7 @@ function isBracketList(value: unknown): value is { min: number; max: number; rat
     Array.isArray(value) &&
     value.every(
       (b) =>
-        b &&
-        typeof b === 'object' &&
-        [b.min, b.max, b.rate].every((n) => typeof n === 'number' && Number.isFinite(n)) &&
-        b.min >= 0 &&
-        b.max > b.min &&
-        b.rate >= 0 &&
-        b.rate <= 1,
+        b && typeof b === 'object' && [b.min, b.max, b.rate].every((n) => typeof n === 'number' && Number.isFinite(n)) && b.min >= 0 && b.max > b.min && b.rate >= 0 && b.rate <= 1,
     )
   )
 }
@@ -75,7 +69,16 @@ export async function saveTaxConfiguration(_prev: TaxActionState, formData: Form
   if (!existing) {
     const created = await prisma.taxConfiguration.create({ data: { year, month, ...values, isActive: false, updatedBy: actor.id } })
     await audit({ userId: actor.id, action: 'CREATE', entityType: 'TaxConfiguration', entityId: created.id, changes: { period: period(year, month), status: 'draft' } })
-    await notify(approvers, { type: 'TAX_DRAFTED', title: `New tax configuration for ${period(year, month)} needs activation`, body: 'Payroll can’t use it until an approver activates it.', href: `${href}?id=${created.id}` }, email)
+    await notify(
+      approvers,
+      {
+        type: 'TAX_DRAFTED',
+        title: `New tax configuration for ${period(year, month)} needs activation`,
+        body: 'Payroll can’t use it until an approver activates it.',
+        href: `${href}?id=${created.id}`,
+      },
+      email,
+    )
     refresh()
     return { status: 'success', message: `Saved as a draft. Approvers have been asked to activate it.` }
   }
@@ -90,8 +93,22 @@ export async function saveTaxConfiguration(_prev: TaxActionState, formData: Form
     childExemption: existing.childExemption.toString(),
     isActive: existing.isActive,
   }
-  const normalised = { ...values, ...Object.fromEntries(Object.entries(values).filter(([k]) => k !== 'payeBrackets' && k !== 'isActive').map(([k, v]) => [k, String(Number(v))])) }
-  const currentNormalised = { ...current, ...Object.fromEntries(Object.entries(current).filter(([k]) => k !== 'payeBrackets' && k !== 'isActive').map(([k, v]) => [k, String(Number(v))])) }
+  const normalised = {
+    ...values,
+    ...Object.fromEntries(
+      Object.entries(values)
+        .filter(([k]) => k !== 'payeBrackets' && k !== 'isActive')
+        .map(([k, v]) => [k, String(Number(v))]),
+    ),
+  }
+  const currentNormalised = {
+    ...current,
+    ...Object.fromEntries(
+      Object.entries(current)
+        .filter(([k]) => k !== 'payeBrackets' && k !== 'isActive')
+        .map(([k, v]) => [k, String(Number(v))]),
+    ),
+  }
   const changes = diff(currentNormalised, normalised)
   if (JSON.stringify(JSON.parse(current.payeBrackets)) !== JSON.stringify(parsed)) changes.payeBrackets = { from: 'previous bands', to: 'new bands' }
   else delete changes.payeBrackets
@@ -111,7 +128,16 @@ export async function saveTaxConfiguration(_prev: TaxActionState, formData: Form
     data: { pendingChanges: JSON.stringify(values), pendingById: actor.id, pendingAt: new Date() },
   })
   await audit({ userId: actor.id, action: 'UPDATE', entityType: 'TaxConfiguration', entityId: existing.id, changes: { proposed: true, ...changes } })
-  await notify(approvers, { type: 'TAX_CHANGE_PROPOSED', title: `Changes proposed to the ${period(year, month)} tax configuration`, body: `${Object.keys(changes).length} settings would change. The current settings stay in use until approved.`, href: `${href}?id=${existing.id}` }, email)
+  await notify(
+    approvers,
+    {
+      type: 'TAX_CHANGE_PROPOSED',
+      title: `Changes proposed to the ${period(year, month)} tax configuration`,
+      body: `${Object.keys(changes).length} settings would change. The current settings stay in use until approved.`,
+      href: `${href}?id=${existing.id}`,
+    },
+    email,
+  )
   refresh()
   return { status: 'success', message: 'Changes proposed. The current settings stay in use until an approver approves them.' }
 }
@@ -126,7 +152,11 @@ export async function activateTaxConfiguration(id: string): Promise<ActionResult
     if (config.updatedBy === actor.id) return { ok: false, message: 'You drafted this configuration, so another approver must activate it.' }
     await prisma.taxConfiguration.update({ where: { id }, data: { isActive: true, approvedAt: new Date(), approvedById: actor.id } })
     await audit({ userId: actor.id, action: 'ACTIVATE', entityType: 'TaxConfiguration', entityId: id, changes: { period: period(config.year, config.month) } })
-    await notify([config.updatedBy], { type: 'TAX_ACTIVATED', title: `Tax configuration for ${period(config.year, config.month)} was activated`, href: `/portal/financial/tax?id=${id}` })
+    await notify([config.updatedBy], {
+      type: 'TAX_ACTIVATED',
+      title: `Tax configuration for ${period(config.year, config.month)} was activated`,
+      href: `/portal/financial/tax?id=${id}`,
+    })
     refresh()
     return { ok: true, message: 'Activated. Payroll runs for this period will use it.' }
   }
@@ -154,7 +184,12 @@ export async function activateTaxConfiguration(id: string): Promise<ActionResult
     },
   })
   await audit({ userId: actor.id, action: 'ACTIVATE', entityType: 'TaxConfiguration', entityId: id, changes: { appliedProposalFrom: config.pendingById } })
-  if (config.pendingById) await notify([config.pendingById], { type: 'TAX_ACTIVATED', title: `Your tax changes for ${period(config.year, config.month)} were approved`, href: `/portal/financial/tax?id=${id}` })
+  if (config.pendingById)
+    await notify([config.pendingById], {
+      type: 'TAX_ACTIVATED',
+      title: `Your tax changes for ${period(config.year, config.month)} were approved`,
+      href: `/portal/financial/tax?id=${id}`,
+    })
   refresh()
   return { ok: true, message: 'Changes approved and applied.' }
 }
@@ -172,7 +207,12 @@ export async function rejectTaxConfiguration(id: string, reason: string): Promis
   if (proposer) {
     await notify(
       [proposer],
-      { type: 'TAX_CHANGES_REQUESTED', title: `Changes requested on the ${period(config.year, config.month)} tax configuration`, body: reason.trim(), href: `/portal/financial/tax?id=${id}` },
+      {
+        type: 'TAX_CHANGES_REQUESTED',
+        title: `Changes requested on the ${period(config.year, config.month)} tax configuration`,
+        body: reason.trim(),
+        href: `/portal/financial/tax?id=${id}`,
+      },
       { subject: 'Tax configuration needs changes', heading: 'An approver sent your tax configuration back', actionLabel: 'Open tax configuration' },
     )
   }

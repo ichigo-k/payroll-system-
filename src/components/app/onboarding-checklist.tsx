@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { ArrowRight, Check } from 'lucide-react'
+import Link from 'next/link'
 import type { ChecklistView } from '@/lib/checklists'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +20,14 @@ export function OnboardingChecklist({ checklist }: { checklist: ChecklistView })
         {checklist.title}
       </h2>
       <div className="mt-2 flex items-center gap-3">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={checklist.doneCount} aria-label="Checklist progress">
+        <div
+          className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={checklist.doneCount}
+          aria-label="Checklist progress"
+        >
           <div className="h-full rounded-full bg-success transition-[width] duration-300 ease-out" style={{ width: `${(checklist.doneCount / total) * 100}%` }} />
         </div>
         <span className="num text-xs text-muted-foreground">
@@ -52,7 +59,9 @@ export function OnboardingChecklist({ checklist }: { checklist: ChecklistView })
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={cn('block text-sm font-medium', step.done ? 'text-muted-foreground' : 'text-foreground')}>{step.label}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{step.done && step.completedAt ? `Completed ${completedOn(step.completedAt)}` : step.description}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {step.done && step.completedAt ? `Completed ${completedOn(step.completedAt)}` : step.description}
+                  </span>
                   {isCurrent && (
                     <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
                       {step.cta}
@@ -60,7 +69,9 @@ export function OnboardingChecklist({ checklist }: { checklist: ChecklistView })
                     </span>
                   )}
                 </span>
-                {!isCurrent && <ArrowRight className="mt-0.5 size-4 shrink-0 text-subtlest opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100" />}
+                {!isCurrent && (
+                  <ArrowRight className="mt-0.5 size-4 shrink-0 text-subtlest opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100" />
+                )}
               </Link>
             </li>
           )

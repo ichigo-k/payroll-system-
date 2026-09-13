@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { CheckCheck } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { markAllNotificationsRead, setEmailNotifications } from '@/app/portal/notification-actions'
 import { useFlags } from './flags'
 import { button } from './styles'

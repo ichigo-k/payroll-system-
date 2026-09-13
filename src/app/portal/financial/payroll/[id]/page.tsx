@@ -1,10 +1,17 @@
+import type { Prisma } from '@prisma/client'
+import { CircleCheck, Clock, Download, Eye, FileSpreadsheet, FileText, Lock, MessageSquare, Search, TriangleAlert, UserMinus } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import type { Prisma } from '@prisma/client'
-import { CircleCheck, Clock, Download, Eye, FileSpreadsheet, FileText, Lock, MessageSquare, Search, TriangleAlert, UserMinus } from 'lucide-react'
+import { ListTabs, queryHref } from '@/components/app/list-tabs'
+import { NoPermission } from '@/components/app/no-permission'
+import { PageHeader } from '@/components/app/page-header'
+import { Pagination } from '@/components/app/pagination'
+import { StatusBadge } from '@/components/app/status-badge'
+import { button, field } from '@/components/app/styles'
 import { can, requirePermission } from '@/lib/access'
-import { actorName, type AuditRow, describeRunEvent, parseChanges } from '@/lib/audit-format'
+import { type AuditRow, actorName, describeRunEvent, parseChanges } from '@/lib/audit-format'
+import { markChecklistVisit } from '@/lib/checklists'
 import { parsePage } from '@/lib/pagination'
 import { formatCurrency } from '@/lib/payroll'
 import { REVIEW_FLAGS, type ReviewFlag } from '@/lib/payroll-engine'
@@ -12,13 +19,6 @@ import { EXPORT_TYPES, type ExportType } from '@/lib/payroll-exports'
 import { approvalsRemaining, checkDecision, type RunStatus } from '@/lib/payroll-rules'
 import { periodLabel } from '@/lib/payroll-runs'
 import { prisma } from '@/lib/prisma'
-import { markChecklistVisit } from '@/lib/checklists'
-import { ListTabs, queryHref } from '@/components/app/list-tabs'
-import { NoPermission } from '@/components/app/no-permission'
-import { PageHeader } from '@/components/app/page-header'
-import { Pagination } from '@/components/app/pagination'
-import { StatusBadge } from '@/components/app/status-badge'
-import { button, field } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { CommentForm } from './comment-form'
 import { ExcludeButton, IncludeButton } from './exclusion-controls'
@@ -31,7 +31,8 @@ type SearchParams = Record<string, string | string[] | undefined>
 
 const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined)
 const dateTime = (d: Date) => d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-const initialsOf = (u: { firstName: string | null; lastName: string | null; email: string }) => ([u.firstName?.[0], u.lastName?.[0]].filter(Boolean).join('') || u.email[0]).toUpperCase()
+const initialsOf = (u: { firstName: string | null; lastName: string | null; email: string }) =>
+  ([u.firstName?.[0], u.lastName?.[0]].filter(Boolean).join('') || u.email[0]).toUpperCase()
 
 const FLAG_FILTERS: Record<string, { label: string; flags?: ReviewFlag[] }> = {
   all: { label: 'All employees' },
@@ -70,7 +71,9 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
     prisma.systemConfig.findFirst({ where: { isActive: true }, select: { requiredApprovals: true } }),
     prisma.user.findMany({ where: { role: 'APPROVER', status: 'active' }, select: { id: true, firstName: true, lastName: true, email: true }, orderBy: { firstName: 'asc' } }),
     prisma.payrollDetail.count({ where: { payrollRunId: run.id, NOT: { flags: '[]' } } }),
-    actor.employeeId ? prisma.payrollDetail.findUnique({ where: { payrollRunId_employeeId: { payrollRunId: run.id, employeeId: actor.employeeId } }, select: { flags: true } }) : null,
+    actor.employeeId
+      ? prisma.payrollDetail.findUnique({ where: { payrollRunId_employeeId: { payrollRunId: run.id, employeeId: actor.employeeId } }, select: { flags: true } })
+      : null,
     run.requestedReviewerId ? prisma.user.findUnique({ where: { id: run.requestedReviewerId }, select: { firstName: true, lastName: true, email: true } }) : null,
     prisma.payrollExclusion.count({ where: { payrollRunId: id } }),
   ])
@@ -133,9 +136,7 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
           <div>
             <p className="font-semibold text-foreground">Changes requested by {actorName(lastChangeRequest.user)}</p>
             <p className="mt-0.5 whitespace-pre-line text-foreground">{lastChangeRequest.comment}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {dateTime(lastChangeRequest.createdAt)}. Make the changes, recalculate and submit again.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{dateTime(lastChangeRequest.createdAt)}. Make the changes, recalculate and submit again.</p>
           </div>
         </div>
       )}
@@ -153,7 +154,9 @@ export default async function PayrollRunPage({ params, searchParams }: { params:
             </p>
             {approvalsThisRound.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Approved by {approvalsThisRound.map((d) => actorName(d.user)).join(', ')}.</p>}
             {canApprove && approveBlockedReason && <p className="mt-1 text-xs text-muted-foreground">{approveBlockedReason}</p>}
-            {approvalsRemaining(required, approvalsThisRound.length) > 0 && canApprove && !approveBlockedReason && <p className="mt-1 text-xs text-muted-foreground">Your review is needed.</p>}
+            {approvalsRemaining(required, approvalsThisRound.length) > 0 && canApprove && !approveBlockedReason && (
+              <p className="mt-1 text-xs text-muted-foreground">Your review is needed.</p>
+            )}
           </div>
         </div>
       )}
@@ -233,7 +236,10 @@ async function EmployeesTab({ runId, period, base, raw, editable }: { runId: str
     ...keys.map((key) => prisma.payrollDetail.count({ where: where(key) })),
   ])
 
-  const excluders = await prisma.user.findMany({ where: { id: { in: [...new Set(exclusions.map((e) => e.createdById))] } }, select: { id: true, firstName: true, lastName: true, email: true } })
+  const excluders = await prisma.user.findMany({
+    where: { id: { in: [...new Set(exclusions.map((e) => e.createdById))] } },
+    select: { id: true, firstName: true, lastName: true, email: true },
+  })
   const excluderName = (userId: string) => {
     const user = excluders.find((u) => u.id === userId)
     return user ? actorName(user) : 'Unknown user'
@@ -281,7 +287,10 @@ async function EmployeesTab({ runId, period, base, raw, editable }: { runId: str
               key={key}
               href={queryHref(base, current, { filter: key === 'all' ? undefined : key })}
               aria-current={key === filter ? 'true' : undefined}
-              className={cn('inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm', key === filter ? 'border-primary bg-accent font-medium text-primary' : 'border-border text-muted-foreground hover:bg-secondary')}
+              className={cn(
+                'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm',
+                key === filter ? 'border-primary bg-accent font-medium text-primary' : 'border-border text-muted-foreground hover:bg-secondary',
+              )}
             >
               {FLAG_FILTERS[key].label}
               <span className="num text-xs">{counts[i]}</span>
@@ -312,15 +321,33 @@ async function EmployeesTab({ runId, period, base, raw, editable }: { runId: str
             <table className="w-full min-w-[1080px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-4 font-semibold">Employee</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">Basic</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">Allowances</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">Gross</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">SSNIT</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">PAYE</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">Other deductions</th>
-                  <th scope="col" className="px-3 py-2 text-right font-semibold">Net pay</th>
-                  <th scope="col" className="py-2 pl-3 font-semibold">Review</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    Employee
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    Basic
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    Allowances
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    Gross
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    SSNIT
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    PAYE
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    Other deductions
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-semibold">
+                    Net pay
+                  </th>
+                  <th scope="col" className="py-2 pl-3 font-semibold">
+                    Review
+                  </th>
                   {editable && (
                     <th scope="col" className="w-10 py-2">
                       <span className="sr-only">Actions</span>
@@ -358,7 +385,11 @@ async function EmployeesTab({ runId, period, base, raw, editable }: { runId: str
                                 key={flag}
                                 className={cn(
                                   'inline-flex h-5 items-center rounded-[3px] px-1.5 text-[11px] font-semibold',
-                                  flag.startsWith('MISSING') ? 'bg-danger-soft text-danger' : flag === 'NEW_EMPLOYEE' ? 'bg-accent text-primary-strong' : 'bg-warning-soft text-warning',
+                                  flag.startsWith('MISSING')
+                                    ? 'bg-danger-soft text-danger'
+                                    : flag === 'NEW_EMPLOYEE'
+                                      ? 'bg-accent text-primary-strong'
+                                      : 'bg-warning-soft text-warning',
                                 )}
                               >
                                 {REVIEW_FLAGS[flag]}
@@ -393,7 +424,12 @@ async function ActivityTab({ runId, actor, canComment }: { runId: string; actor:
       orderBy: { timestamp: 'desc' },
       take: 200,
     }),
-    prisma.payrollComment.findMany({ where: { payrollRunId: runId }, include: { user: { select: { id: true, firstName: true, lastName: true, email: true, role: true } } }, orderBy: { createdAt: 'desc' }, take: 200 }),
+    prisma.payrollComment.findMany({
+      where: { payrollRunId: runId },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true, role: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    }),
   ])
 
   type Item = { key: string; at: Date; kind: 'event'; row: AuditRow } | { key: string; at: Date; kind: 'comment'; comment: (typeof comments)[number] }
@@ -416,7 +452,10 @@ async function ActivityTab({ runId, actor, canComment }: { runId: string; actor:
           {items.map((item) =>
             item.kind === 'comment' ? (
               <li key={item.key} className="relative flex gap-3">
-                <span aria-hidden className="z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-deep text-xs font-semibold text-white ring-4 ring-background">
+                <span
+                  aria-hidden
+                  className="z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-deep text-xs font-semibold text-white ring-4 ring-background"
+                >
                   {initialsOf(item.comment.user)}
                 </span>
                 <div className="min-w-0 flex-1 rounded-lg border border-border px-4 py-3">
@@ -548,9 +587,15 @@ async function DocumentsTab({ runId, base, status, canExport }: { runId: string;
         <table className="mt-2 w-full text-sm">
           <thead>
             <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-              <th scope="col" className="py-2 pr-4 font-semibold">Document</th>
-              <th scope="col" className="px-4 py-2 font-semibold">Exported by</th>
-              <th scope="col" className="py-2 pl-4 font-semibold">When</th>
+              <th scope="col" className="py-2 pr-4 font-semibold">
+                Document
+              </th>
+              <th scope="col" className="px-4 py-2 font-semibold">
+                Exported by
+              </th>
+              <th scope="col" className="py-2 pl-4 font-semibold">
+                When
+              </th>
             </tr>
           </thead>
           <tbody>

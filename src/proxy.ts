@@ -1,26 +1,25 @@
 // src/proxy.ts
-import { NextResponse } from 'next/server'
+
 import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth-config'
 
 const FINANCIAL_ROLES = ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR']
-const EMPLOYEE_ROLE   = 'EMPLOYEE'
+const EMPLOYEE_ROLE = 'EMPLOYEE'
 
 export async function proxy(request: NextRequest) {
   const session = await auth()
   const { pathname } = request.nextUrl
 
-  const isFinancialPath    = pathname.startsWith('/portal/financial')
-  const isSelfServicePath  = pathname.startsWith('/portal/self-service')
-  const isLoginPath        = pathname === '/login' || pathname.startsWith('/login/')
-  const isRootPath         = pathname === '/'
+  const isFinancialPath = pathname.startsWith('/portal/financial')
+  const isSelfServicePath = pathname.startsWith('/portal/self-service')
+  const isLoginPath = pathname === '/login' || pathname.startsWith('/login/')
+  const isRootPath = pathname === '/'
 
   // Redirect root to the appropriate destination
   if (isRootPath) {
     if (session?.user) {
-      const dest = FINANCIAL_ROLES.includes(session.user.role)
-        ? '/portal/financial'
-        : '/portal/self-service'
+      const dest = FINANCIAL_ROLES.includes(session.user.role) ? '/portal/financial' : '/portal/self-service'
       return NextResponse.redirect(new URL(dest, request.url))
     }
     return NextResponse.redirect(new URL('/login', request.url))
@@ -28,9 +27,7 @@ export async function proxy(request: NextRequest) {
 
   // Redirect authenticated users away from login
   if (isLoginPath && session?.user) {
-    const dest = FINANCIAL_ROLES.includes(session.user.role)
-      ? '/portal/financial'
-      : '/portal/self-service'
+    const dest = FINANCIAL_ROLES.includes(session.user.role) ? '/portal/financial' : '/portal/self-service'
     return NextResponse.redirect(new URL(dest, request.url))
   }
 

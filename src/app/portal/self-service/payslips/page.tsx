@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ListTabs, queryHref } from '@/components/app/list-tabs'
+import { PageHeader } from '@/components/app/page-header'
+import { Pagination } from '@/components/app/pagination'
 import { parsePage } from '@/lib/pagination'
 import { formatCurrency } from '@/lib/payroll'
 import { periodLabel } from '@/lib/payroll-runs'
 import { prisma } from '@/lib/prisma'
 import { PUBLISHED, requireSelfServiceEmployee } from '@/lib/self-service'
-import { ListTabs, queryHref } from '@/components/app/list-tabs'
-import { PageHeader } from '@/components/app/page-header'
-import { Pagination } from '@/components/app/pagination'
 
 export const metadata: Metadata = { title: 'Payslips' }
 
@@ -25,12 +25,25 @@ export default async function PayslipsPage({ searchParams }: { searchParams: Pro
     )
   }
 
-  const years = (await prisma.payrollRun.findMany({ where: { status: 'PAID', payrollDetails: { some: { employeeId: employee.id } } }, distinct: ['year'], select: { year: true }, orderBy: { year: 'desc' } })).map((r) => r.year)
+  const years = (
+    await prisma.payrollRun.findMany({
+      where: { status: 'PAID', payrollDetails: { some: { employeeId: employee.id } } },
+      distinct: ['year'],
+      select: { year: true },
+      orderBy: { year: 'desc' },
+    })
+  ).map((r) => r.year)
   const year = typeof raw.year === 'string' && years.includes(Number(raw.year)) ? Number(raw.year) : undefined
   const where = { employeeId: employee.id, payrollRun: { status: 'PAID' as const, ...(year ? { year } : {}) } }
 
   const [lines, total] = await Promise.all([
-    prisma.payrollDetail.findMany({ where, include: { payrollRun: { select: { month: true, year: true, paidAt: true } } }, orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }], skip, take }),
+    prisma.payrollDetail.findMany({
+      where,
+      include: { payrollRun: { select: { month: true, year: true, paidAt: true } } },
+      orderBy: [{ payrollRun: { year: 'desc' } }, { payrollRun: { month: 'desc' } }],
+      skip,
+      take,
+    }),
     prisma.payrollDetail.count({ where: { employeeId: employee.id, ...PUBLISHED, ...(year ? { payrollRun: { status: 'PAID', year } } : {}) } }),
   ])
   const current = { year: year ? String(year) : undefined, size: typeof raw.size === 'string' ? raw.size : undefined }
@@ -60,10 +73,18 @@ export default async function PayslipsPage({ searchParams }: { searchParams: Pro
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                  <th scope="col" className="py-2 pr-4 font-semibold">Period</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Gross pay</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Deductions</th>
-                  <th scope="col" className="px-4 py-2 text-right font-semibold">Net pay</th>
+                  <th scope="col" className="py-2 pr-4 font-semibold">
+                    Period
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Gross pay
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Deductions
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-semibold">
+                    Net pay
+                  </th>
                   <th scope="col" className="py-2 pl-4 font-semibold">
                     <span className="sr-only">Open</span>
                   </th>

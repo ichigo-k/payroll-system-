@@ -1,6 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
-import { LOGO_PNG_BASE64 } from '@/lib/email/logo'
 import { formatMoney } from '@/lib/currency'
+import { LOGO_PNG_BASE64 } from '@/lib/email/logo'
 
 /**
  * Shared look for every PDF: Atlassian-style ink and blue, a letterhead with the company name,
@@ -22,7 +22,15 @@ export const colors = {
 
 export const styles = StyleSheet.create({
   page: { paddingTop: 36, paddingBottom: 56, paddingHorizontal: 40, fontFamily: 'Helvetica', fontSize: 9, color: colors.ink },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 14, marginBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingBottom: 14,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logo: { width: 28, height: 28, borderRadius: 6 },
   company: { fontSize: 13, fontFamily: 'Helvetica-Bold' },
@@ -34,7 +42,18 @@ export const styles = StyleSheet.create({
   footerRule: { position: 'absolute', left: 40, right: 40, bottom: 38, borderTopWidth: 1, borderTopColor: colors.border },
   footerLeft: { position: 'absolute', left: 40, bottom: 24, fontSize: 7, color: colors.subtle },
   footerPage: { position: 'absolute', right: 40, bottom: 24, fontSize: 7, color: colors.subtle },
-  watermark: { position: 'absolute', top: '42%', left: 0, right: 0, textAlign: 'center', fontSize: 84, fontFamily: 'Helvetica-Bold', color: '#AE2E24', opacity: 0.08, transform: 'rotate(-30deg)' },
+  watermark: {
+    position: 'absolute',
+    top: '42%',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 84,
+    fontFamily: 'Helvetica-Bold',
+    color: '#AE2E24',
+    opacity: 0.08,
+    transform: 'rotate(-30deg)',
+  },
   sectionTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: colors.subtle, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 6 },
   section: { marginBottom: 16 },
   // Tables
@@ -114,7 +133,21 @@ export function Watermark({ show, label = 'DRAFT' }: { show: boolean; label?: st
 export type Meta = { company: Company; generatedBy: string; generatedAt: Date; draft: boolean }
 
 /** A standard page: letterhead, content, footer and optional watermark. */
-export function DocPage({ meta, eyebrow, title, subtitle, orientation = 'portrait', children }: { meta: Meta; eyebrow: string; title: string; subtitle?: string; orientation?: 'portrait' | 'landscape'; children: React.ReactNode }) {
+export function DocPage({
+  meta,
+  eyebrow,
+  title,
+  subtitle,
+  orientation = 'portrait',
+  children,
+}: {
+  meta: Meta
+  eyebrow: string
+  title: string
+  subtitle?: string
+  orientation?: 'portrait' | 'landscape'
+  children: React.ReactNode
+}) {
   return (
     <Page size="A4" orientation={orientation} style={styles.page}>
       <Watermark show={meta.draft} />

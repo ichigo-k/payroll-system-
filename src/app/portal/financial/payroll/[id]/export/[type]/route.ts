@@ -1,8 +1,8 @@
-import { createElement } from 'react'
 import type { ReportType } from '@prisma/client'
+import { createElement } from 'react'
 import { audit, requirePermission } from '@/lib/access'
 import { actorName } from '@/lib/audit-format'
-import { buildRows, EXPORT_TYPES, toCsv, type ExportFormat, type ExportType, exportFilename } from '@/lib/payroll-exports'
+import { buildRows, EXPORT_TYPES, type ExportFormat, type ExportType, exportFilename, toCsv } from '@/lib/payroll-exports'
 import { CONTENT_TYPES, renderPdf } from '@/lib/pdf/render'
 import { BankInstructionDocument, PayeScheduleDocument, PayslipsDocument, RunSummaryDocument, SsnitScheduleDocument } from '@/lib/pdf/run-documents'
 import { prisma } from '@/lib/prisma'
@@ -53,7 +53,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       description: approved ? null : `Exported while ${run.status.toLowerCase()}`,
     },
   })
-  await audit({ userId: actor.id, action: 'DOWNLOAD', entityType: 'PayrollRun', entityId: run.id, changes: { document: meta.label, format: format.toUpperCase(), status: run.status, rows: lines.length } })
+  await audit({
+    userId: actor.id,
+    action: 'DOWNLOAD',
+    entityType: 'PayrollRun',
+    entityId: run.id,
+    changes: { document: meta.label, format: format.toUpperCase(), status: run.status, rows: lines.length },
+  })
 
   return new Response(typeof body === 'string' ? body : new Uint8Array(body), {
     headers: {
@@ -63,4 +69,3 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     },
   })
 }
-

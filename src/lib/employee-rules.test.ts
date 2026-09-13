@@ -13,7 +13,9 @@ describe('checkOffboard', () => {
 
   it('blocks offboarding yourself or someone who already left', () => {
     expect(checkOffboard({ actorEmployeeId: 'e1', employee, endDate: new Date('2026-09-30'), reason: 'Resignation' })).toMatch(/yourself/)
-    expect(checkOffboard({ actorEmployeeId: null, employee: { ...employee, employmentStatus: 'TERMINATED' }, endDate: new Date('2026-09-30'), reason: 'Resignation' })).toMatch(/already left/)
+    expect(checkOffboard({ actorEmployeeId: null, employee: { ...employee, employmentStatus: 'TERMINATED' }, endDate: new Date('2026-09-30'), reason: 'Resignation' })).toMatch(
+      /already left/,
+    )
   })
 })
 

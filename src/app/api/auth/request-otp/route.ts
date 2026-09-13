@@ -1,12 +1,12 @@
-import { type NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
-import { prisma } from '@/lib/prisma'
+import { type NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { sendOtpEmail } from '@/lib/email'
 import { generateOtp } from '@/lib/otp'
-import { normalizeEmail } from '@/lib/user-rules'
+import { prisma } from '@/lib/prisma'
 import { canRequestSignIn } from '@/lib/sign-in'
-import bcrypt from 'bcryptjs'
-import { z } from 'zod'
+import { normalizeEmail } from '@/lib/user-rules'
 
 const OTP_EXPIRY_MINUTES = 10
 const PENDING_EMAIL_COOKIE = 'otp-pending-email'
@@ -69,18 +69,12 @@ export async function POST(request: NextRequest) {
       await sendOtpEmail({ to: email, otp, expiresInMinutes: OTP_EXPIRY_MINUTES })
     } catch (err) {
       console.error('[request-otp] Email delivery failed:', err)
-      return NextResponse.json(
-        { message: 'Failed to send code. Please try again.' },
-        { status: 500 }
-      )
+      return NextResponse.json({ message: 'Failed to send code. Please try again.' }, { status: 500 })
     }
 
     return NextResponse.json({ message: GENERIC_MSG })
   } catch (err) {
     console.error('[request-otp] Database error:', (err as Error).message)
-    return NextResponse.json(
-      { message: 'An error occurred. Please try again.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ message: 'An error occurred. Please try again.' }, { status: 500 })
   }
 }

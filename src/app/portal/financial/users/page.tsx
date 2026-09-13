@@ -1,16 +1,16 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
 import type { Prisma } from '@prisma/client'
 import { Lock, Search, UserPlus } from 'lucide-react'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { PageHeader } from '@/components/app/page-header'
+import { Pagination } from '@/components/app/pagination'
+import { StatusBadge } from '@/components/app/status-badge'
+import { button, field, link } from '@/components/app/styles'
 import { can, requirePermission } from '@/lib/access'
 import { parsePage } from '@/lib/pagination'
-import { Pagination } from '@/components/app/pagination'
 import { prisma } from '@/lib/prisma'
 import { ROLE_INFO } from '@/lib/roles'
 import { accessState } from '@/lib/user-rules'
-import { PageHeader } from '@/components/app/page-header'
-import { StatusBadge } from '@/components/app/status-badge'
-import { button, field, link } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { UserActions } from './user-actions'
 
@@ -120,7 +120,10 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         }
       />
 
-      <nav aria-label="User views" className="flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-2px_0_var(--border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="User views"
+        className="flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-2px_0_var(--border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {viewKeys.map((key) => {
           const active = key === params.view
           return (
@@ -167,12 +170,24 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b-2 border-border text-left text-xs font-semibold text-muted-foreground">
-                <th scope="col" className="py-2 pr-4 font-semibold">User</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Role</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Status</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Employee record</th>
-                <th scope="col" className="px-4 py-2 font-semibold">Last sign-in</th>
-                <th scope="col" className="w-12 py-2 pl-2"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="py-2 pr-4 font-semibold">
+                  User
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Role
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Employee record
+                </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  Last sign-in
+                </th>
+                <th scope="col" className="w-12 py-2 pl-2">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +200,13 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   <tr key={user.id} className={cn('border-b border-border hover:bg-muted', state === 'deactivated' && 'text-muted-foreground')}>
                     <td className="py-2 pr-4">
                       <div className="flex items-center gap-2.5">
-                        <div aria-hidden className={cn('flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold', state === 'deactivated' ? 'bg-secondary text-subtlest' : 'bg-brand-deep text-white')}>
+                        <div
+                          aria-hidden
+                          className={cn(
+                            'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                            state === 'deactivated' ? 'bg-secondary text-subtlest' : 'bg-brand-deep text-white',
+                          )}
+                        >
                           {initials}
                         </div>
                         <div className="min-w-0">
@@ -217,19 +238,21 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     </td>
                     <td className="num px-4 py-2 text-muted-foreground">{formatLastSignIn(user.lastLogin)}</td>
                     <td className="py-2 pl-2 text-right">
-                      {canManage && <UserActions
-                        isSelf={isSelf}
-                        employees={unlinkedEmployees}
-                        user={{
-                          id: user.id,
-                          name,
-                          email: user.email,
-                          role: user.role,
-                          status: user.status,
-                          invited: state === 'invited',
-                          employee: user.employee ? { id: user.employee.id, name: `${user.employee.firstName} ${user.employee.lastName}` } : null,
-                        }}
-                      />}
+                      {canManage && (
+                        <UserActions
+                          isSelf={isSelf}
+                          employees={unlinkedEmployees}
+                          user={{
+                            id: user.id,
+                            name,
+                            email: user.email,
+                            role: user.role,
+                            status: user.status,
+                            invited: state === 'invited',
+                            employee: user.employee ? { id: user.employee.id, name: `${user.employee.firstName} ${user.employee.lastName}` } : null,
+                          }}
+                        />
+                      )}
                     </td>
                   </tr>
                 )

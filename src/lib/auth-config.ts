@@ -1,11 +1,12 @@
 // src/lib/auth-config.ts
+
+import bcrypt from 'bcryptjs'
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
+import { resolveAccountAfterCode } from '@/lib/sign-in'
 import { getUserAccess } from '@/lib/user-access'
 import { normalizeEmail } from '@/lib/user-rules'
-import { resolveAccountAfterCode } from '@/lib/sign-in'
 
 // How often a session re-reads role and status from the database.
 const ACCESS_REFRESH_MS = 60_000
@@ -15,7 +16,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Credentials({
       credentials: {
         email: { label: 'Email', type: 'email' },
-        otp:   { label: 'OTP',   type: 'text'  },
+        otp: { label: 'OTP', type: 'text' },
       },
       async authorize(credentials) {
         const { otp } = credentials as { email: string; otp: string }
@@ -52,12 +53,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null
 
         // Update lastLogin separately — failure here should not un-consume the token
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLogin: new Date() },
-        }).catch((err) => {
-          console.error('[auth] lastLogin update failed (non-fatal):', err)
-        })
+        await prisma.user
+          .update({
+            where: { id: user.id },
+            data: { lastLogin: new Date() },
+          })
+          .catch((err) => {
+            console.error('[auth] lastLogin update failed (non-fatal):', err)
+          })
 
         // Write LOGIN audit log
         await prisma.auditLog.create({
@@ -84,10 +87,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.userId    = user.id as string
-        token.role      = (user as { role: string }).role
+        token.userId = user.id as string
+        token.role = (user as { role: string }).role
         token.firstName = (user as { firstName: string | null }).firstName
-        token.lastName  = (user as { lastName: string | null }).lastName
+        token.lastName = (user as { lastName: string | null }).lastName
         token.accessCheckedAt = 0
       }
 
@@ -105,10 +108,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      session.user.id         = token.userId as string
-      session.user.role       = token.role as string
-      session.user.firstName  = token.firstName as string
-      session.user.lastName   = token.lastName as string
+      session.user.id = token.userId as string
+      session.user.role = token.role as string
+      session.user.firstName = token.firstName as string
+      session.user.lastName = token.lastName as string
       session.user.employeeId = (token.employeeId as string | null | undefined) ?? null
       return session
     },

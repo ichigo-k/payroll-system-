@@ -1,18 +1,18 @@
+import { Download, ShieldCheck } from 'lucide-react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Download, ShieldCheck } from 'lucide-react'
-import { requirePermission } from '@/lib/access'
-import { ACTION_LABELS, actorName, ENTITY_LABELS, fieldChanges, parseChanges } from '@/lib/audit-format'
-import { auditWhere, readAuditFilters } from '@/lib/audit-query'
-import { parsePage } from '@/lib/pagination'
-import { prisma } from '@/lib/prisma'
-import { markChecklistVisit } from '@/lib/checklists'
 import { queryHref } from '@/components/app/list-tabs'
 import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
-import { button, field } from '@/components/app/styles'
 import { Select } from '@/components/app/select'
+import { button, field } from '@/components/app/styles'
+import { requirePermission } from '@/lib/access'
+import { ACTION_LABELS, actorName, ENTITY_LABELS, fieldChanges, parseChanges } from '@/lib/audit-format'
+import { auditWhere, readAuditFilters } from '@/lib/audit-query'
+import { markChecklistVisit } from '@/lib/checklists'
+import { parsePage } from '@/lib/pagination'
+import { prisma } from '@/lib/prisma'
 
 export const metadata: Metadata = { title: 'Audit log' }
 
@@ -28,8 +28,26 @@ function recordHref(type: string, id: string) {
 
 function device(userAgent: string | null) {
   if (!userAgent) return null
-  const browser = /Edg\//.test(userAgent) ? 'Edge' : /Chrome\//.test(userAgent) ? 'Chrome' : /Firefox\//.test(userAgent) ? 'Firefox' : /Safari\//.test(userAgent) ? 'Safari' : 'Browser'
-  const os = /Windows/.test(userAgent) ? 'Windows' : /Mac OS X/.test(userAgent) ? 'macOS' : /Android/.test(userAgent) ? 'Android' : /iPhone|iPad/.test(userAgent) ? 'iOS' : /Linux/.test(userAgent) ? 'Linux' : ''
+  const browser = /Edg\//.test(userAgent)
+    ? 'Edge'
+    : /Chrome\//.test(userAgent)
+      ? 'Chrome'
+      : /Firefox\//.test(userAgent)
+        ? 'Firefox'
+        : /Safari\//.test(userAgent)
+          ? 'Safari'
+          : 'Browser'
+  const os = /Windows/.test(userAgent)
+    ? 'Windows'
+    : /Mac OS X/.test(userAgent)
+      ? 'macOS'
+      : /Android/.test(userAgent)
+        ? 'Android'
+        : /iPhone|iPad/.test(userAgent)
+          ? 'iOS'
+          : /Linux/.test(userAgent)
+            ? 'Linux'
+            : ''
   return [browser, os].filter(Boolean).join(' on ')
 }
 
@@ -78,15 +96,30 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
         </label>
         <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Person</span>
-          <Select name="user" aria-label="Person" defaultValue={filters.user ?? ''} options={[{ value: '', label: 'Anyone' }, ...people.map((p) => ({ value: p.id, label: actorName(p) }))]} />
+          <Select
+            name="user"
+            aria-label="Person"
+            defaultValue={filters.user ?? ''}
+            options={[{ value: '', label: 'Anyone' }, ...people.map((p) => ({ value: p.id, label: actorName(p) }))]}
+          />
         </div>
         <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Action</span>
-          <Select name="action" aria-label="Action" defaultValue={filters.action ?? ''} options={[{ value: '', label: 'Any action' }, ...Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }))]} />
+          <Select
+            name="action"
+            aria-label="Action"
+            defaultValue={filters.action ?? ''}
+            options={[{ value: '', label: 'Any action' }, ...Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }))]}
+          />
         </div>
         <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Record type</span>
-          <Select name="entity" aria-label="Record type" defaultValue={filters.entity ?? ''} options={[{ value: '', label: 'Any record' }, ...Object.entries(ENTITY_LABELS).map(([value, label]) => ({ value, label }))]} />
+          <Select
+            name="entity"
+            aria-label="Record type"
+            defaultValue={filters.entity ?? ''}
+            options={[{ value: '', label: 'Any record' }, ...Object.entries(ENTITY_LABELS).map(([value, label]) => ({ value, label }))]}
+          />
         </div>
         <label className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">From</span>
@@ -125,7 +158,9 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
               return (
                 <li key={row.id} className="py-3">
                   <details className="group">
-                    <summary className={`grid cursor-pointer list-none gap-x-4 gap-y-1 text-sm sm:grid-cols-[170px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] ${hasDetail ? '' : 'cursor-default'}`}>
+                    <summary
+                      className={`grid cursor-pointer list-none gap-x-4 gap-y-1 text-sm sm:grid-cols-[170px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] ${hasDetail ? '' : 'cursor-default'}`}
+                    >
                       <span className="num text-muted-foreground">{dateTime(row.timestamp)}</span>
                       <span>
                         <Link href={`/portal/financial/users/${row.user.id}`} className="font-medium text-foreground hover:text-primary hover:underline">

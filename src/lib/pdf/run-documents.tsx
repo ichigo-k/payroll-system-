@@ -1,8 +1,8 @@
 import { Text, View } from '@react-pdf/renderer'
+import { activeCurrency } from '@/lib/currency'
 import type { LineItems } from '@/lib/pay-items'
 import { ssnitSplit } from '@/lib/payroll-exports'
-import { amount, colors, type Column, Doc, DocPage, Facts, longDate, type Meta, money, Signatures, styles, Table } from './theme'
-import { activeCurrency } from '@/lib/currency'
+import { amount, type Column, colors, Doc, DocPage, Facts, longDate, type Meta, money, Signatures, styles, Table } from './theme'
 
 /** PDFs generated from a payroll run's snapshot lines. */
 
@@ -75,7 +75,13 @@ export function PayslipBundleDocument({ meta, title, entries }: { meta: Meta; ti
         const allowances = line.lineItems.allowances.length || line.allowancesTotal === 0 ? line.lineItems.allowances : [{ name: 'Allowances', amount: line.allowancesTotal }]
         const deductions = line.lineItems.deductions.length || line.deductionsTotal === 0 ? line.lineItems.deductions : [{ name: 'Other deductions', amount: line.deductionsTotal }]
         return (
-          <DocPage key={`${run.year}-${run.month}-${line.employeeCode}`} meta={meta} eyebrow="Payslip" title={run.period} subtitle={run.paidAt ? `Paid ${longDate(run.paidAt)}` : undefined}>
+          <DocPage
+            key={`${run.year}-${run.month}-${line.employeeCode}`}
+            meta={meta}
+            eyebrow="Payslip"
+            title={run.period}
+            subtitle={run.paidAt ? `Paid ${longDate(run.paidAt)}` : undefined}
+          >
             <View style={[styles.section, { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderColor: colors.border, borderRadius: 4, padding: 10 }]}>
               {(
                 [
@@ -122,7 +128,18 @@ export function PayslipBundleDocument({ meta, title, entries }: { meta: Meta; ti
               </View>
             </View>
 
-            <View style={{ marginTop: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.brandSoft, borderRadius: 4, paddingVertical: 12, paddingHorizontal: 14 }}>
+            <View
+              style={{
+                marginTop: 18,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: colors.brandSoft,
+                borderRadius: 4,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+              }}
+            >
               <Text style={[styles.bold, { fontSize: 11 }]}>Net pay</Text>
               <Text style={[styles.bold, { fontSize: 18, color: colors.brand }]}>{money(line.netPay)}</Text>
             </View>
@@ -149,7 +166,14 @@ export function RunSummaryDocument({ meta, run, lines }: { meta: Meta; run: RunI
   const employerSsnit = sum(lines, (l) => l.ssnitEmployer)
   const departments = [...new Set(lines.map((l) => l.department))].sort().map((name) => {
     const group = lines.filter((l) => l.department === name)
-    return { name, count: group.length, gross: sum(group, (l) => l.grossIncome), paye: sum(group, (l) => l.paye), ssnit: sum(group, (l) => l.ssnitEmployee + l.ssnitEmployer), net: sum(group, (l) => l.netPay) }
+    return {
+      name,
+      count: group.length,
+      gross: sum(group, (l) => l.grossIncome),
+      paye: sum(group, (l) => l.paye),
+      ssnit: sum(group, (l) => l.ssnitEmployee + l.ssnitEmployer),
+      net: sum(group, (l) => l.netPay),
+    }
   })
   const split = lines.map(ssnitSplit)
   const tier1 = Math.round(split.reduce((t, s) => t + s.tier1, 0) * 100) / 100
@@ -189,7 +213,14 @@ export function RunSummaryDocument({ meta, run, lines }: { meta: Meta; run: RunI
           <Table
             columns={deptColumns}
             rows={departments}
-            total={['Total', String(lines.length), amount(gross), amount(sum(lines, (l) => l.paye)), amount(sum(lines, (l) => l.ssnitEmployee + l.ssnitEmployer)), amount(sum(lines, (l) => l.netPay))]}
+            total={[
+              'Total',
+              String(lines.length),
+              amount(gross),
+              amount(sum(lines, (l) => l.paye)),
+              amount(sum(lines, (l) => l.ssnitEmployee + l.ssnitEmployer)),
+              amount(sum(lines, (l) => l.netPay)),
+            ]}
           />
         </View>
 
@@ -265,10 +296,12 @@ export function BankInstructionDocument({ meta, run, lines }: { meta: Meta; run:
         <Text style={{ marginBottom: 10 }}>Dear Sir or Madam,</Text>
         <Text style={[styles.bold, { marginBottom: 10, textDecoration: 'underline' }]}>SALARY PAYMENT INSTRUCTION: {run.period.toUpperCase()}</Text>
         <Text style={[styles.paragraph, { marginBottom: 8 }]}>
-          Please debit our account {c.bankAccountName ? `${c.bankAccountName}, ` : ''}number {c.bankAccountNumber ?? '[account number]'}, with the sum of {money(total)} and credit the {lines.length}{' '}
-          {lines.length === 1 ? 'account' : 'accounts'} listed in the attached schedule with the amounts shown against each beneficiary.
+          Please debit our account {c.bankAccountName ? `${c.bankAccountName}, ` : ''}number {c.bankAccountNumber ?? '[account number]'}, with the sum of {money(total)} and credit
+          the {lines.length} {lines.length === 1 ? 'account' : 'accounts'} listed in the attached schedule with the amounts shown against each beneficiary.
         </Text>
-        <Text style={[styles.paragraph, { marginBottom: 14 }]}>The schedule has been prepared from our approved payroll for {run.period}. Please contact us before processing if any account details cannot be validated.</Text>
+        <Text style={[styles.paragraph, { marginBottom: 14 }]}>
+          The schedule has been prepared from our approved payroll for {run.period}. Please contact us before processing if any account details cannot be validated.
+        </Text>
 
         <View style={styles.section}>
           <Facts
@@ -312,14 +345,38 @@ export function PayeScheduleDocument({ meta, run, lines }: { meta: Meta; run: Ru
   ]
   return (
     <Doc title={`PAYE schedule ${run.period}`}>
-      <DocPage meta={meta} orientation="landscape" eyebrow="GRA PAYE schedule" title={run.period} subtitle={`Employer TIN ${meta.company.taxId ?? 'not set'} · Due by ${dueDate(run, 15)}`}>
+      <DocPage
+        meta={meta}
+        orientation="landscape"
+        eyebrow="GRA PAYE schedule"
+        title={run.period}
+        subtitle={`Employer TIN ${meta.company.taxId ?? 'not set'} · Due by ${dueDate(run, 15)}`}
+      >
         <View style={styles.section}>
-          <Facts items={[['Employees', String(lines.length)], ['Gross income', money(sum(lines, (l) => l.grossIncome))], ['Chargeable income', money(sum(lines, (l) => l.taxableIncome))], ['PAYE payable', money(sum(lines, (l) => l.paye))]]} />
+          <Facts
+            items={[
+              ['Employees', String(lines.length)],
+              ['Gross income', money(sum(lines, (l) => l.grossIncome))],
+              ['Chargeable income', money(sum(lines, (l) => l.taxableIncome))],
+              ['PAYE payable', money(sum(lines, (l) => l.paye))],
+            ]}
+          />
         </View>
         <Table
           columns={columns}
           rows={lines}
-          total={['', '', 'Total', '', amount(sum(lines, (l) => l.baseSalary)), amount(sum(lines, (l) => l.allowancesTotal)), amount(sum(lines, (l) => l.grossIncome)), amount(sum(lines, (l) => l.ssnitEmployee)), amount(sum(lines, (l) => l.taxableIncome)), amount(sum(lines, (l) => l.paye))]}
+          total={[
+            '',
+            '',
+            'Total',
+            '',
+            amount(sum(lines, (l) => l.baseSalary)),
+            amount(sum(lines, (l) => l.allowancesTotal)),
+            amount(sum(lines, (l) => l.grossIncome)),
+            amount(sum(lines, (l) => l.ssnitEmployee)),
+            amount(sum(lines, (l) => l.taxableIncome)),
+            amount(sum(lines, (l) => l.paye)),
+          ]}
         />
         <Signatures people={[{ role: 'Prepared by', name: meta.generatedBy }, { role: 'Authorised signatory' }]} />
       </DocPage>
@@ -344,11 +401,38 @@ export function SsnitScheduleDocument({ meta, run, lines }: { meta: Meta; run: R
   const t = (pick: (r: Row) => number) => amount(Math.round(rows.reduce((s, r) => s + pick(r), 0) * 100) / 100)
   return (
     <Doc title={`SSNIT contributions ${run.period}`}>
-      <DocPage meta={meta} orientation="landscape" eyebrow="SSNIT contribution schedule" title={run.period} subtitle={`Employer SSNIT number ${meta.company.employerSsnitNumber ?? 'not set'} · Due by ${dueDate(run, 14)}`}>
+      <DocPage
+        meta={meta}
+        orientation="landscape"
+        eyebrow="SSNIT contribution schedule"
+        title={run.period}
+        subtitle={`Employer SSNIT number ${meta.company.employerSsnitNumber ?? 'not set'} · Due by ${dueDate(run, 14)}`}
+      >
         <View style={styles.section}>
-          <Facts items={[['Employees', String(rows.length)], ['Total contributions', `${activeCurrency()} ${t((r) => r.total)}`], ['Tier 1 to SSNIT', `${activeCurrency()} ${t((r) => r.tier1)}`], ['Tier 2 to trustee', `${activeCurrency()} ${t((r) => r.tier2)}`]]} />
+          <Facts
+            items={[
+              ['Employees', String(rows.length)],
+              ['Total contributions', `${activeCurrency()} ${t((r) => r.total)}`],
+              ['Tier 1 to SSNIT', `${activeCurrency()} ${t((r) => r.tier1)}`],
+              ['Tier 2 to trustee', `${activeCurrency()} ${t((r) => r.tier2)}`],
+            ]}
+          />
         </View>
-        <Table columns={columns} rows={rows} total={['', '', 'Total', t((r) => r.line.baseSalary), t((r) => r.line.ssnitEmployee), t((r) => r.line.ssnitEmployer), t((r) => r.total), t((r) => r.tier1), t((r) => r.tier2)]} />
+        <Table
+          columns={columns}
+          rows={rows}
+          total={[
+            '',
+            '',
+            'Total',
+            t((r) => r.line.baseSalary),
+            t((r) => r.line.ssnitEmployee),
+            t((r) => r.line.ssnitEmployer),
+            t((r) => r.total),
+            t((r) => r.tier1),
+            t((r) => r.tier2),
+          ]}
+        />
         <Signatures people={[{ role: 'Prepared by', name: meta.generatedBy }, { role: 'Authorised signatory' }]} />
       </DocPage>
     </Doc>

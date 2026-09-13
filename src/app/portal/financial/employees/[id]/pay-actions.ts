@@ -1,12 +1,12 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
+import { revalidatePath } from 'next/cache'
 import { type ActionResult, audit, requirePermission } from '@/lib/access'
+import { formatMoney } from '@/lib/currency'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
 import { allowanceTypeFor, cleanItemName, deductionTypeFor, formatPercentChange, payItemName, SALARY_CHANGE_REASONS, salaryChangePercent } from '@/lib/pay-items'
 import { prisma } from '@/lib/prisma'
-import { formatMoney } from '@/lib/currency'
 
 const FREQUENCIES = ['monthly', 'annual', 'one-time']
 
@@ -47,7 +47,10 @@ export async function setSalaryAction(employeeId: string, input: { amount: strin
   const from = new Date(input.effectiveFrom)
   if (Number.isNaN(from.getTime())) return { ok: false, message: 'Choose the date the salary starts.' }
 
-  const current = await prisma.salaryConfiguration.findFirst({ where: { employeeId, OR: [{ effectiveTo: null }, { effectiveTo: { gte: from } }] }, orderBy: { effectiveFrom: 'desc' } })
+  const current = await prisma.salaryConfiguration.findFirst({
+    where: { employeeId, OR: [{ effectiveTo: null }, { effectiveTo: { gte: from } }] },
+    orderBy: { effectiveFrom: 'desc' },
+  })
   const reasonLabel = (SALARY_CHANGE_REASONS as readonly string[]).includes(input.reason) ? input.reason : current ? null : 'New hire'
   if (!reasonLabel) return { ok: false, message: 'Choose why the salary is changing.' }
   const note = input.note?.trim().slice(0, 200)
@@ -125,8 +128,16 @@ export async function addAllowanceAction(employeeId: string, input: ItemInput): 
   const item = readItem(input)
   if ('error' in item) return { ok: false, message: item.error }
 
-  const allowance = await prisma.allowance.create({ data: { employeeId, type: allowanceTypeFor(item.name), description: item.name, amount: item.amount, frequency: item.frequency } })
-  await audit({ userId: g.actor.id, action: 'CREATE', entityType: 'Employee', entityId: employeeId, changes: { allowance: { id: allowance.id, name: item.name, amount: money(item.amount), frequency: item.frequency } } })
+  const allowance = await prisma.allowance.create({
+    data: { employeeId, type: allowanceTypeFor(item.name), description: item.name, amount: item.amount, frequency: item.frequency },
+  })
+  await audit({
+    userId: g.actor.id,
+    action: 'CREATE',
+    entityType: 'Employee',
+    entityId: employeeId,
+    changes: { allowance: { id: allowance.id, name: item.name, amount: money(item.amount), frequency: item.frequency } },
+  })
   refresh(employeeId)
   return { ok: true, message: `Added ${item.name} (${money(item.amount)}, ${item.frequency}).` }
 }
@@ -162,7 +173,13 @@ export async function endAllowanceAction(employeeId: string, allowanceId: string
   const allowance = await prisma.allowance.findFirst({ where: { id: allowanceId, employeeId, isActive: true } })
   if (!allowance) return { ok: false, message: 'That allowance is no longer active.' }
   await prisma.allowance.update({ where: { id: allowance.id }, data: { isActive: false } })
-  await audit({ userId: g.actor.id, action: 'DELETE', entityType: 'Employee', entityId: employeeId, changes: { allowance: { id: allowance.id, name: payItemName(allowance, 'allowance'), amount: money(Number(allowance.amount)) }, ended: true } })
+  await audit({
+    userId: g.actor.id,
+    action: 'DELETE',
+    entityType: 'Employee',
+    entityId: employeeId,
+    changes: { allowance: { id: allowance.id, name: payItemName(allowance, 'allowance'), amount: money(Number(allowance.amount)) }, ended: true },
+  })
   refresh(employeeId)
   return { ok: true, message: `${payItemName(allowance, 'allowance')} ended. It won’t be paid from the next recalculated run.` }
 }
@@ -177,13 +194,17 @@ export async function addDeductionAction(employeeId: string, input: DeductionInp
   const dates = readDates(input)
   if ('error' in dates) return { ok: false, message: dates.error as string }
 
-  const deduction = await prisma.deduction.create({ data: { employeeId, type: deductionTypeFor(item.name), description: item.name, amount: item.amount, frequency: item.frequency, ...dates } })
+  const deduction = await prisma.deduction.create({
+    data: { employeeId, type: deductionTypeFor(item.name), description: item.name, amount: item.amount, frequency: item.frequency, ...dates },
+  })
   await audit({
     userId: g.actor.id,
     action: 'CREATE',
     entityType: 'Employee',
     entityId: employeeId,
-    changes: { deduction: { id: deduction.id, name: item.name, amount: money(item.amount), frequency: item.frequency, startDate: input.startDate || null, endDate: input.endDate || null } },
+    changes: {
+      deduction: { id: deduction.id, name: item.name, amount: money(item.amount), frequency: item.frequency, startDate: input.startDate || null, endDate: input.endDate || null },
+    },
   })
   refresh(employeeId)
   return { ok: true, message: `Added ${item.name} (${money(item.amount)}, ${item.frequency}).` }
@@ -199,7 +220,10 @@ export async function updateDeductionAction(employeeId: string, deductionId: str
   const existing = await prisma.deduction.findFirst({ where: { id: deductionId, employeeId, isActive: true } })
   if (!existing) return { ok: false, message: 'That deduction is no longer active.' }
 
-  await prisma.deduction.update({ where: { id: existing.id }, data: { type: deductionTypeFor(item.name), description: item.name, amount: item.amount, frequency: item.frequency, ...dates } })
+  await prisma.deduction.update({
+    where: { id: existing.id },
+    data: { type: deductionTypeFor(item.name), description: item.name, amount: item.amount, frequency: item.frequency, ...dates },
+  })
   const iso = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null
   await audit({
     userId: g.actor.id,
@@ -225,7 +249,13 @@ export async function endDeductionAction(employeeId: string, deductionId: string
   const deduction = await prisma.deduction.findFirst({ where: { id: deductionId, employeeId, isActive: true } })
   if (!deduction) return { ok: false, message: 'That deduction is no longer active.' }
   await prisma.deduction.update({ where: { id: deduction.id }, data: { isActive: false } })
-  await audit({ userId: g.actor.id, action: 'DELETE', entityType: 'Employee', entityId: employeeId, changes: { deduction: { id: deduction.id, name: payItemName(deduction, 'deduction'), amount: money(Number(deduction.amount)) }, ended: true } })
+  await audit({
+    userId: g.actor.id,
+    action: 'DELETE',
+    entityType: 'Employee',
+    entityId: employeeId,
+    changes: { deduction: { id: deduction.id, name: payItemName(deduction, 'deduction'), amount: money(Number(deduction.amount)) }, ended: true },
+  })
   refresh(employeeId)
   return { ok: true, message: `${payItemName(deduction, 'deduction')} ended.` }
 }

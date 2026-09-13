@@ -25,7 +25,11 @@ export function auditWhere(f: AuditFilters): Prisma.AuditLogWhereInput {
         { changes: { contains: f.q, mode: 'insensitive' } },
         { entityId: { contains: f.q } },
         { ipAddress: { contains: f.q } },
-        { user: { OR: [{ email: { contains: f.q, mode: 'insensitive' } }, { firstName: { contains: f.q, mode: 'insensitive' } }, { lastName: { contains: f.q, mode: 'insensitive' } }] } },
+        {
+          user: {
+            OR: [{ email: { contains: f.q, mode: 'insensitive' } }, { firstName: { contains: f.q, mode: 'insensitive' } }, { lastName: { contains: f.q, mode: 'insensitive' } }],
+          },
+        },
       ],
     })
   }

@@ -64,9 +64,5 @@ export function checkEditable({ status }: { status: RunStatus }) {
  */
 export function effectiveTaxConfig<T extends { year: number; month: number; isActive: boolean; approvedAt: Date | null }>(configs: T[], year: number, month: number): T | null {
   const startsBy = (c: T) => c.year < year || (c.year === year && c.month <= month)
-  return (
-    configs
-      .filter((c) => c.isActive && c.approvedAt && startsBy(c))
-      .sort((a, b) => b.year - a.year || b.month - a.month)[0] ?? null
-  )
+  return configs.filter((c) => c.isActive && c.approvedAt && startsBy(c)).sort((a, b) => b.year - a.year || b.month - a.month)[0] ?? null
 }

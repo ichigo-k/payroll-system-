@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { FileText } from 'lucide-react'
+import { useState } from 'react'
 import { Dialog } from '@/components/app/dialog'
 import { button, field } from '@/components/app/styles'
 
@@ -58,7 +58,9 @@ export function LetterButton({ employeeId, name, canIncludeSalary, hasSalary }: 
               <input type="checkbox" checked={salary} disabled={!hasSalary} onChange={(e) => setSalary(e.target.checked)} className="mt-0.5 size-4 accent-primary" />
               <span>
                 <span className="font-medium text-foreground">Include current monthly pay</span>
-                <span className="block text-xs text-muted-foreground">{hasSalary ? 'Basic salary and regular allowances. Leave it out unless they asked for it.' : 'No current salary is set.'}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {hasSalary ? 'Basic salary and regular allowances. Leave it out unless they asked for it.' : 'No current salary is set.'}
+                </span>
               </span>
             </label>
           )}

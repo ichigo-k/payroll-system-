@@ -61,7 +61,11 @@ export function searchGhanaBanks(query: string): GhanaBank[] {
   if (!words.length) return GHANA_BANKS
   // Every typed word has to start a word in the name, short name or an alias: "stan" finds Stanbic, not "First"
   const matches = (text: string) => {
-    const targets = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9]+/)
+    const targets = text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
     return words.every((word) => targets.some((target) => target.startsWith(word)))
   }
   return GHANA_BANKS.filter((bank) => [bank.name, bank.short, ...(bank.aliases ?? [])].some(matches))
@@ -74,6 +78,16 @@ export function bankLogoUrl(bank: GhanaBank, size = 64) {
 export function bankInitials(name: string) {
   const bank = findGhanaBank(name)
   const source = bank?.short ?? name
-  const words = source.replace(/[^A-Za-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean)
-  return (words.length > 1 ? words.slice(0, 2).map((w) => w[0]).join('') : source.slice(0, 3)).toUpperCase()
+  const words = source
+    .replace(/[^A-Za-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  return (
+    words.length > 1
+      ? words
+          .slice(0, 2)
+          .map((w) => w[0])
+          .join('')
+      : source.slice(0, 3)
+  ).toUpperCase()
 }

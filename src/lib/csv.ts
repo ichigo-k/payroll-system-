@@ -50,7 +50,11 @@ export type EmployeeImportRow = {
 
 /** Parses an employee import CSV into rows with per-row validation messages. Shared by the preview and the server. */
 export function parseEmployeeCsv(csv: string): { rows: EmployeeImportRow[]; error?: string } {
-  const lines = csv.replace(/^﻿/, '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const lines = csv
+    .replace(/^﻿/, '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
   if (lines.length < 2) return { rows: [], error: 'The file has no employee rows.' }
 
   const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'))
