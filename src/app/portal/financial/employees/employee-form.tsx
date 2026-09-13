@@ -4,11 +4,12 @@ import { useActionState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CircleAlert } from 'lucide-react'
+import { BankCombobox } from '@/components/app/bank-combobox'
 import { DepartmentCombobox } from '@/components/app/department-combobox'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
-import { type ActionState, createEmployee } from './actions'
+import { type ActionState, createEmployee, updateEmployee } from './actions'
 
 const initialState: ActionState = { status: 'idle' }
 
@@ -58,25 +59,29 @@ function Section({ title, description, children }: { title: string; description:
   )
 }
 
-export function EmployeeForm({ departments }: { departments: string[] }) {
-  const [state, formAction, pending] = useActionState(createEmployee, initialState)
+export type EmployeeFormInitial = Record<string, string>
+
+export function EmployeeForm({ departments, initial, employeeId }: { departments: string[]; initial?: EmployeeFormInitial; employeeId?: string }) {
+  const editing = !!employeeId
+  const [state, formAction, pending] = useActionState(editing ? updateEmployee : createEmployee, initialState)
   const router = useRouter()
   const { showFlag } = useFlags()
   const handled = useRef<ActionState | null>(null)
   const errors = state.fieldErrors ?? {}
-  const values = state.values ?? {}
+  const values = state.values ?? initial ?? {}
 
   useEffect(() => {
     if (state.status !== 'success' || handled.current === state) return
     handled.current = state
-    showFlag({ tone: 'success', title: state.message ?? 'Employee added.' })
-    router.push('/portal/financial/employees')
-  }, [state, showFlag, router])
+    showFlag({ tone: 'success', title: state.message ?? 'Saved.' })
+    router.push(state.employeeId ? `/portal/financial/employees/${state.employeeId}${editing ? '' : '?tab=pay'}` : '/portal/financial/employees')
+  }, [state, showFlag, router, editing])
 
   const inputClass = (key: string) => cn(field, errors[key] && 'border-danger')
 
   return (
     <form action={formAction} noValidate className="border-t border-border">
+      {employeeId && <input type="hidden" name="id" value={employeeId} />}
       <Section title="Personal details" description="How this person appears on payslips and how we reach them.">
         <Field label="First name" htmlFor="firstName" required error={errors.firstName}>
           <input id="firstName" name="firstName" defaultValue={values.firstName} autoComplete="off" aria-invalid={!!errors.firstName} className={inputClass('firstName')} />
@@ -93,9 +98,6 @@ export function EmployeeForm({ departments }: { departments: string[] }) {
       </Section>
 
       <Section title="Employment" description="Where they sit in the organisation and when they started.">
-        <Field label="Employee ID" htmlFor="employeeId" required error={errors.employeeId}>
-          <input id="employeeId" name="employeeId" defaultValue={values.employeeId} autoComplete="off" aria-invalid={!!errors.employeeId} className={cn(inputClass('employeeId'), 'font-mono')} />
-        </Field>
         <Field label="Department" htmlFor="department" required error={errors.department} hint="Pick one, or type a new name and choose Add.">
           <DepartmentCombobox id="department" name="department" departments={departments} defaultValue={values.department} required />
         </Field>
@@ -105,14 +107,38 @@ export function EmployeeForm({ departments }: { departments: string[] }) {
         <Field label="Start date" htmlFor="startDate" required error={errors.startDate}>
           <input id="startDate" name="startDate" defaultValue={values.startDate} type="date" aria-invalid={!!errors.startDate} className={inputClass('startDate')} />
         </Field>
+        {editing && (
+          <Field
+            label="Employment status"
+            htmlFor="employmentStatus"
+            required
+            error={errors.employmentStatus}
+            hint={values.employmentStatus === 'TERMINATED' ? 'This person has left. Use Reinstate on their profile to bring them back.' : 'Only active employees are paid. To record someone leaving, use Offboard on their profile.'}
+          >
+            {values.employmentStatus === 'TERMINATED' ? (
+              <select id="employmentStatus" disabled value="TERMINATED" className={field}>
+                <option value="TERMINATED">Left the company</option>
+              </select>
+            ) : (
+              <select id="employmentStatus" name="employmentStatus" defaultValue={values.employmentStatus ?? 'ACTIVE'} className={field}>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="SUSPENDED">Suspended</option>
+              </select>
+            )}
+          </Field>
+        )}
       </Section>
 
-      <Section title="Statutory and bank details" description="Optional now. Needed before this person can be paid.">
+      <Section title="Statutory and bank details" description="Needed before this person can be paid. Bank detail changes are flagged to approvers and the employee is emailed.">
         <Field label="SSNIT number" htmlFor="ssnitNumber" error={errors.ssnitNumber}>
           <input id="ssnitNumber" name="ssnitNumber" defaultValue={values.ssnitNumber} autoComplete="off" aria-invalid={!!errors.ssnitNumber} className={cn(inputClass('ssnitNumber'), 'font-mono')} />
         </Field>
+        <Field label="TIN / Ghana Card number" htmlFor="tin" hint="Needed on the GRA PAYE schedule.">
+          <input id="tin" name="tin" defaultValue={values.tin} autoComplete="off" placeholder="GHA-000000000-0" className={cn(field, 'font-mono')} />
+        </Field>
         <Field label="Bank name" htmlFor="bankName">
-          <input id="bankName" name="bankName" defaultValue={values.bankName} autoComplete="off" className={field} />
+          <BankCombobox id="bankName" name="bankName" defaultValue={values.bankName} />
         </Field>
         <Field label="Account name" htmlFor="accountName">
           <input id="accountName" name="accountName" defaultValue={values.accountName} autoComplete="off" className={field} />
@@ -132,11 +158,11 @@ export function EmployeeForm({ departments }: { departments: string[] }) {
           )}
         </div>
         <div className="flex gap-2">
-          <Link href="/portal/financial/employees" className={button.subtle}>
+          <Link href={employeeId ? `/portal/financial/employees/${employeeId}` : '/portal/financial/employees'} className={button.subtle}>
             Cancel
           </Link>
           <button type="submit" disabled={pending} className={button.primary}>
-            {pending ? 'Adding employee' : 'Add employee'}
+            {pending ? 'Saving' : editing ? 'Save changes' : 'Add employee'}
           </button>
         </div>
       </div>

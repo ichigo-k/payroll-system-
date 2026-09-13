@@ -2,13 +2,16 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { Prisma } from '@prisma/client'
 import { ArrowDown, ArrowUp, Plus, Search, Upload } from 'lucide-react'
-import { auth } from '@/lib/auth-config'
+import { can, requirePermission } from '@/lib/access'
+import { NoPermission } from '@/components/app/no-permission'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button, field, link } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { EmployeeAccessActions } from './access-actions'
+import { EmployeeRowActions } from './employee-row-actions'
+import { formatCurrency } from '@/lib/payroll'
 import { ROLE_INFO } from '@/lib/roles'
 import { selfServiceState } from '@/lib/user-rules'
 
@@ -20,6 +23,10 @@ const VIEWS = {
   all: { label: 'All employees', where: () => ({}) },
   active: { label: 'Active', where: () => ({ employmentStatus: 'ACTIVE' }) },
   inactive: { label: 'Not active', where: () => ({ employmentStatus: { not: 'ACTIVE' } }) },
+  nopay: {
+    label: 'No pay set',
+    where: (): Prisma.EmployeeWhereInput => ({ employmentStatus: 'ACTIVE', salaryConfigs: { none: { OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }] } } }),
+  },
   recent: { label: 'Added in last 30 days', where: () => ({ createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }) },
 } satisfies Record<string, { label: string; where: () => Prisma.EmployeeWhereInput }>
 type ViewKey = keyof typeof VIEWS
@@ -66,9 +73,13 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     dir: first(raw.dir) === 'desc' ? 'desc' : 'asc',
   }
 
-  const session = await auth()
-  const canEdit = ['ADMIN', 'PREPARER'].includes(session?.user?.role ?? '')
-  const canManageAccess = session?.user?.role === 'ADMIN'
+  const actor = await requirePermission('employees.view')
+  if (!actor) return <NoPermission title="You can’t view employees" description="Employee records are available to administrators, preparers, approvers and auditors." />
+  const canEdit = can(actor.role, 'employees.edit')
+  const canManageAccess = can(actor.role, 'employees.access')
+  const canSeePay = can(actor.role, 'salary.view')
+  const canEditPay = can(actor.role, 'salary.edit')
+  const now = new Date()
 
   const searchWhere: Prisma.EmployeeWhereInput = params.q
     ? {
@@ -87,7 +98,11 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     prisma.employee.findMany({
       where: { AND: [VIEWS[params.view].where(), searchWhere] },
       orderBy: SORTS[params.sort].orderBy(params.dir),
-      include: { user: { select: { status: true, lastLogin: true, role: true } } },
+      include: {
+        user: { select: { status: true, lastLogin: true, role: true } },
+        salaryConfigs: { where: { effectiveFrom: { lte: now }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] }, orderBy: { effectiveFrom: 'desc' }, take: 1, select: { baseSalary: true } },
+        _count: { select: { payrollDetails: true } },
+      },
       take: 200,
     }),
     prisma.employee.count(),
@@ -216,12 +231,22 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                     </th>
                   )
                 })}
+                {canSeePay && (
+                  <th scope="col" className="px-4 py-0 text-right font-semibold">
+                    Monthly basic
+                  </th>
+                )}
                 <th scope="col" className="px-4 py-0 font-semibold">
                   Status
                 </th>
                 <th scope="col" className="px-4 py-0 font-semibold">
                   Access
                 </th>
+                {(canEdit || canEditPay) && (
+                  <th scope="col" className="w-12 py-0 pl-2">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                )}
                 {canManageAccess && (
                   <th scope="col" className="w-12 py-0 pl-2">
                     <span className="sr-only">Access actions</span>
@@ -238,9 +263,9 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                         {initials(employee.firstName, employee.lastName)}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">
+                        <Link href={`/portal/financial/employees/${employee.id}`} className="block truncate font-medium text-foreground hover:text-primary hover:underline">
                           {employee.firstName} {employee.lastName}
-                        </p>
+                        </Link>
                         <p className="truncate text-xs text-muted-foreground">{employee.email}</p>
                       </div>
                     </div>
@@ -250,8 +275,26 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                   <td className="num px-4 py-2 text-foreground">
                     {employee.startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </td>
+                  {canSeePay && (
+                    <td className="num px-4 py-2 text-right">
+                      {employee.salaryConfigs[0] ? (
+                        formatCurrency(Number(employee.salaryConfigs[0].baseSalary))
+                      ) : employee.employmentStatus === 'TERMINATED' ? (
+                        <span className="text-subtlest">-</span>
+                      ) : canEditPay ? (
+                        <Link href={`/portal/financial/employees/${employee.id}?tab=pay&edit=salary`} className="inline-flex h-6 items-center rounded-[3px] bg-warning-soft px-1.5 font-sans text-xs font-semibold text-warning hover:underline">
+                          Set up pay
+                        </Link>
+                      ) : (
+                        <span className="inline-flex h-5 items-center rounded-[3px] bg-warning-soft px-1.5 font-sans text-[11px] font-semibold text-warning">No pay set</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2">
                     <StatusBadge status={employee.employmentStatus} />
+                    {employee.employmentStatus === 'TERMINATED' && employee.endDate && (
+                      <span className="mt-0.5 block text-xs text-muted-foreground">Left {employee.endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    )}
                   </td>
                   <td className="px-4 py-2">
                     <StatusBadge status={SELF_SERVICE_BADGE[selfServiceState(employee)]} />
@@ -259,6 +302,19 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                       <span className="ml-1.5 text-xs text-muted-foreground">{ROLE_INFO[employee.user.role].label}</span>
                     )}
                   </td>
+                  {(canEdit || canEditPay) && (
+                    <td className="py-2 pl-2 text-right">
+                      <EmployeeRowActions
+                        employeeId={employee.id}
+                        name={`${employee.firstName} ${employee.lastName}`}
+                        status={employee.employmentStatus}
+                        hasPay={employee.salaryConfigs.length > 0}
+                        payrollLines={employee._count.payrollDetails}
+                        canEditEmployee={canEdit}
+                        canEditPay={canEditPay}
+                      />
+                    </td>
+                  )}
                   {canManageAccess && (
                     <td className="py-2 pl-2 text-right">
                       <EmployeeAccessActions
