@@ -65,7 +65,7 @@ function Section({ title, description, children }: { title: string; description:
   )
 }
 
-export function TaxForm({ values, canEdit }: { values: TaxFormValues; canEdit: boolean }) {
+export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { values: TaxFormValues; canEdit: boolean; submitLabel?: string }) {
   const [state, formAction, pending] = useActionState<TaxActionState, FormData>(saveTaxConfiguration, { status: 'idle' })
   const [brackets, setBrackets] = useState(() =>
     values.brackets.map((b) => ({ min: String(b.min), max: b.max >= NO_UPPER_LIMIT ? '' : String(b.max), rate: String(Math.round(b.rate * 10000) / 100) })),
@@ -108,7 +108,7 @@ export function TaxForm({ values, canEdit }: { values: TaxFormValues; canEdit: b
           </Field>
           <label className="flex items-center gap-2 self-end pb-1.5 text-sm text-foreground">
             <input name="isActive" type="checkbox" defaultChecked={values.isActive} disabled={disabled} className="size-4 accent-primary" />
-            Active configuration
+            Active once approved
           </label>
         </div>
       </Section>
@@ -213,7 +213,7 @@ export function TaxForm({ values, canEdit }: { values: TaxFormValues; canEdit: b
             disabled={pending}
             className={button.primary}
           >
-            {pending ? 'Saving' : 'Save configuration'}
+            {pending ? 'Saving' : submitLabel}
           </button>
         </div>
       )}
