@@ -18,8 +18,12 @@ import { StatusBadge } from '@/components/app/status-badge'
 import { button } from '@/components/app/styles'
 import { EmployeeAccessActions } from '../access-actions'
 import { BankLogo } from '@/components/app/bank-combobox'
+import { CountryFlag } from '@/components/app/country-combobox'
+import { countryName } from '@/lib/countries'
+import { ageOn, genderLabel, nearRetirement, yearsOfService } from '@/lib/people'
 import { payItemName } from '@/lib/pay-items'
 import { EmployeeRowActions } from '../employee-row-actions'
+import { LetterButton } from './letter-button'
 import { PayPanel } from './pay-panel'
 
 export const metadata: Metadata = { title: 'Employee' }
@@ -96,6 +100,7 @@ export default async function EmployeePage({ params, searchParams }: { params: P
                 terminated={employee.employmentStatus === 'TERMINATED'}
               />
             )}
+            {(canEditEmployee || canSeePay) && <LetterButton employeeId={employee.id} name={name} canIncludeSalary={canSeePay} hasSalary={hasPay} />}
             {canEditEmployee && (
               <Link href={`${base}/edit`} className={button.default}>
                 <Pencil className="size-4" />
@@ -145,10 +150,19 @@ export default async function EmployeePage({ params, searchParams }: { params: P
         <div className="grid gap-x-10 gap-y-2 py-6 lg:grid-cols-2">
           {[
             {
+              title: 'Personal',
+              rows: [
+                ['Date of birth', employee.dateOfBirth ? (canEditEmployee ? `${date(employee.dateOfBirth)} (${ageOn(employee.dateOfBirth)} years)` : `${ageOn(employee.dateOfBirth)} years old`) : 'Missing'],
+                ['Gender', genderLabel(employee.gender) || '-'],
+                ['Nationality', employee.nationality ? countryName(employee.nationality) : '-'],
+              ],
+            },
+            {
               title: 'Contact',
               rows: [
                 ['Work email', employee.email],
                 ['Phone', employee.phone ?? '-'],
+                ['Address', [employee.address, employee.city].filter(Boolean).join(', ') || '-'],
               ],
             },
             {
@@ -157,7 +171,7 @@ export default async function EmployeePage({ params, searchParams }: { params: P
                 ['Employee ID', employee.employeeId],
                 ['Department', employee.department],
                 ['Job title', employee.designation ?? '-'],
-                ['Start date', date(employee.startDate)],
+                ['Start date', `${date(employee.startDate)} (${yearsOfService(employee.startDate, employee.endDate)} ${yearsOfService(employee.startDate, employee.endDate) === 1 ? 'year' : 'years'} of service)`],
                 ['End date', date(employee.endDate)],
               ],
             },
@@ -194,6 +208,15 @@ export default async function EmployeePage({ params, searchParams }: { params: P
                     <dd className={value === 'Missing' ? 'font-medium text-danger' : 'text-foreground'}>
                       {label === 'Self-service' ? (
                         <StatusBadge status={SELF_SERVICE_BADGE[selfServiceState(employee)]} />
+                      ) : label === 'Nationality' && employee.nationality ? (
+                        <span className="flex items-center gap-2">
+                          <CountryFlag code={employee.nationality} width={21} />
+                          {value}
+                        </span>
+                      ) : label === 'Date of birth' && employee.dateOfBirth && nearRetirement(employee.dateOfBirth) ? (
+                        <span>
+                          {value} <span className="ml-1 inline-flex h-5 items-center rounded-[3px] bg-warning-soft px-1.5 text-[11px] font-semibold text-warning">Retirement age</span>
+                        </span>
                       ) : label === 'Bank' && employee.bankName ? (
                         <span className="flex items-center gap-2">
                           <BankLogo name={employee.bankName} size={20} />

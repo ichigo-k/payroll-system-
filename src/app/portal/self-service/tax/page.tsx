@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { requireSelfServiceEmployee } from '@/lib/self-service'
 import { ListTabs } from '@/components/app/list-tabs'
 import { PageHeader } from '@/components/app/page-header'
+import { button } from '@/components/app/styles'
+import { Download } from 'lucide-react'
 
 export const metadata: Metadata = { title: 'Tax & SSNIT' }
 
@@ -25,7 +27,18 @@ export default async function TaxSummaryPage({ searchParams }: { searchParams: P
 
   return (
     <div>
-      <PageHeader title="Tax & SSNIT" description="What was deducted for PAYE and what went into your pension, month by month. Use this for your personal tax records." />
+      <PageHeader
+        title="Tax & SSNIT"
+        description="What was deducted for PAYE and what went into your pension, month by month. Use this for your personal tax records."
+        actions={
+          years.includes(year) && (
+            <a href={`/portal/self-service/tax/certificate/${year}`} className={button.primary}>
+              <Download className="size-4" />
+              {year} tax certificate
+            </a>
+          )
+        }
+      />
 
       {years.length > 1 && <ListTabs label="Tax years" tabs={years.map((y) => ({ key: String(y), label: String(y), active: y === year, href: `/portal/self-service/tax?year=${y}` }))} />}
 
