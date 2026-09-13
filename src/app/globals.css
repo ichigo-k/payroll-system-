@@ -99,6 +99,8 @@
   --brand-deep: #09326c;
 
   --border: #dfe1e6;
+  --scrollbar-thumb: #c1c7d0;
+  --scrollbar-thumb-hover: #8590a2;
   --input: #b3b9c4;
   --ring: #388bff;
 
@@ -146,6 +148,8 @@
   --warning-soft: #533f04;
   --brand-deep: #082145;
   --border: #38414a;
+  --scrollbar-thumb: #454f59;
+  --scrollbar-thumb-hover: #738496;
   --input: #738496;
   --ring: #85b8ff;
   --sidebar: #1d2125;
@@ -166,6 +170,48 @@
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    transition: background-color 200ms ease-out;
+  }
+
+  /* Slim, quiet scrollbars everywhere: a rounded thumb on a transparent track */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  *:hover {
+    scrollbar-color: var(--scrollbar-thumb-hover) transparent;
+  }
+
+  /* Safari and older browsers without scrollbar-color */
+  @supports not (scrollbar-color: auto) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      border: 2px solid transparent;
+      border-radius: 9999px;
+      background-color: var(--scrollbar-thumb);
+      background-clip: content-box;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: var(--scrollbar-thumb-hover);
+    }
+  }
+
+  /*
+   * An open modal locks page scroll but keeps the scrollbar's space so the layout doesn't jump.
+   * The dimmed backdrop can't cover that space, so tint the page behind it to match.
+   */
+  html:has(.modal-backdrop[data-open]) {
+    background-color: color-mix(in srgb, #091e42 49%, var(--background));
   }
 
   body {

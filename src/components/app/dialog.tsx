@@ -28,7 +28,7 @@ export function Dialog({
   return (
     <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
       <BaseDialog.Portal>
-        <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-[#091E427D] transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0" />
+        <BaseDialog.Backdrop className="modal-backdrop fixed inset-0 z-50 bg-[#091E427D] transition-opacity duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0" />
         <BaseDialog.Popup
           className={`fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-4rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-popover shadow-[0_8px_12px_rgba(9,30,66,0.15),0_0_1px_rgba(9,30,66,0.31)] outline-none transition-[opacity,transform] duration-200 ease-out data-ending-style:scale-[0.97] data-ending-style:opacity-0 data-starting-style:scale-[0.97] data-starting-style:opacity-0 ${width === 'sm' ? 'max-w-md' : 'max-w-xl'}`}
         >
