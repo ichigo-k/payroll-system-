@@ -12,7 +12,6 @@ import {
   House,
   Receipt,
   Percent,
-  ScanEye,
   ScrollText,
   Settings,
   UserCog,
@@ -31,7 +30,6 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   '/portal/financial/payroll': ClipboardList,
   '/portal/financial/reports': ChartColumn,
   '/portal/financial/approvals': ClipboardCheck,
-  '/portal/financial/review': ScanEye,
   '/portal/financial/users': UserCog,
   '/portal/financial/config': Settings,
   '/portal/financial/audit': ScrollText,
@@ -39,7 +37,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
 }
 
 const NAV_SECTIONS: { label: string; hrefs: string[] }[] = [
-  { label: 'Payroll', hrefs: ['/portal/financial/payroll', '/portal/financial/approvals', '/portal/financial/review'] },
+  { label: 'Payroll', hrefs: ['/portal/financial/payroll', '/portal/financial/approvals'] },
   { label: 'People', hrefs: ['/portal/financial/employees', '/portal/financial/salary'] },
   { label: 'Configuration', hrefs: ['/portal/financial/tax', '/portal/financial/users', '/portal/financial/config'] },
   { label: 'Insights', hrefs: ['/portal/financial/reports', '/portal/financial/audit'] },

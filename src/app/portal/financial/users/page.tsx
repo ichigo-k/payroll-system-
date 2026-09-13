@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { Prisma } from '@prisma/client'
 import { Lock, Search, UserPlus } from 'lucide-react'
-import { requireRole } from '@/lib/access'
+import { can, requirePermission } from '@/lib/access'
+import { parsePage } from '@/lib/pagination'
+import { Pagination } from '@/components/app/pagination'
 import { prisma } from '@/lib/prisma'
 import { ROLE_INFO } from '@/lib/roles'
 import { accessState } from '@/lib/user-rules'
@@ -16,7 +18,7 @@ export const metadata: Metadata = { title: 'User management' }
 
 const VIEWS = {
   all: { label: 'All users', where: (): Prisma.UserWhereInput => ({}) },
-  finance: { label: 'Finance team', where: (): Prisma.UserWhereInput => ({ role: { in: ['ADMIN', 'PREPARER', 'APPROVER'] }, status: 'active' }) },
+  finance: { label: 'Finance team', where: (): Prisma.UserWhereInput => ({ role: { in: ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR'] }, status: 'active' }) },
   employees: { label: 'Employees', where: (): Prisma.UserWhereInput => ({ role: 'EMPLOYEE', status: 'active' }) },
   deactivated: { label: 'Deactivated', where: (): Prisma.UserWhereInput => ({ status: { not: 'active' } }) },
 }
@@ -49,7 +51,7 @@ function formatLastSignIn(date: Date | null) {
 const ACCESS_BADGE = { active: 'ACTIVE', invited: 'INVITED', deactivated: 'DEACTIVATED', none: 'INACTIVE' } as const
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const actor = await requireRole(['ADMIN'])
+  const actor = await requirePermission('users.view')
   if (!actor) {
     return (
       <div className="mx-auto max-w-lg py-20 text-center">
@@ -57,13 +59,15 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           <Lock className="size-5" />
         </div>
         <h1 className="mt-4 text-xl font-semibold">You don’t have access to user management</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Only administrators can invite people and change roles. Ask an administrator if you need someone added.</p>
+        <p className="mt-2 text-sm text-muted-foreground">User management is for administrators, with read-only access for auditors.</p>
       </div>
     )
   }
 
   const raw = await searchParams
   const viewParam = first(raw.view) ?? 'all'
+  const { page, pageSize, skip, take } = parsePage(raw)
+  const canManage = can(actor.role, 'users.manage')
   const params: Params = {
     q: (first(raw.q) ?? '').trim(),
     view: viewParam in VIEWS ? (viewParam as ViewKey) : 'all',
@@ -80,13 +84,15 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
     : {}
 
   const viewKeys = Object.keys(VIEWS) as ViewKey[]
-  const [users, unlinked, ...viewCounts] = await Promise.all([
+  const [users, total, unlinked, ...viewCounts] = await Promise.all([
     prisma.user.findMany({
       where: { AND: [VIEWS[params.view].where(), searchWhere] },
       include: { employee: { select: { id: true, firstName: true, lastName: true, employeeId: true } } },
       orderBy: [{ status: 'asc' }, { role: 'asc' }, { firstName: 'asc' }, { email: 'asc' }],
-      take: 300,
+      skip,
+      take,
     }),
+    prisma.user.count({ where: { AND: [VIEWS[params.view].where(), searchWhere] } }),
     prisma.employee.findMany({
       where: { userId: null },
       select: { id: true, firstName: true, lastName: true, employeeId: true, email: true },
@@ -105,10 +111,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
         title="User management"
         description="Invite people, choose what they can do, and turn access off when they leave."
         actions={
-          <Link href="/portal/financial/users/invite" className={button.primary}>
-            <UserPlus className="size-4" />
-            Invite user
-          </Link>
+          canManage && (
+            <Link href="/portal/financial/users/invite" className={button.primary}>
+              <UserPlus className="size-4" />
+              Invite user
+            </Link>
+          )
         }
       />
 
@@ -182,7 +190,9 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                         </div>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-foreground">
-                            {name}
+                            <Link href={`/portal/financial/users/${user.id}`} className="hover:text-primary hover:underline">
+                              {name}
+                            </Link>
                             {isSelf && <span className="ml-1.5 text-xs font-normal text-subtlest">(you)</span>}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">{user.email}</p>
@@ -207,7 +217,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                     </td>
                     <td className="num px-4 py-2 text-muted-foreground">{formatLastSignIn(user.lastLogin)}</td>
                     <td className="py-2 pl-2 text-right">
-                      <UserActions
+                      {canManage && <UserActions
                         isSelf={isSelf}
                         employees={unlinkedEmployees}
                         user={{
@@ -219,7 +229,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                           invited: state === 'invited',
                           employee: user.employee ? { id: user.employee.id, name: `${user.employee.firstName} ${user.employee.lastName}` } : null,
                         }}
-                      />
+                      />}
                     </td>
                   </tr>
                 )
@@ -227,6 +237,18 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
             </tbody>
           </table>
         </div>
+      )}
+      {users.length > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          noun="users"
+          hrefFor={(p, size) => {
+            const base = hrefWith(params, {})
+            return `${base}${base.includes('?') ? '&' : '?'}page=${p}&size=${size}`
+          }}
+        />
       )}
     </div>
   )

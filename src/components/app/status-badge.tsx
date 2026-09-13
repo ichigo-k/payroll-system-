@@ -24,6 +24,8 @@ const STATUS: Record<string, { label: string; appearance: Appearance }> = {
   SIGNED_IN: { label: 'Signed in', appearance: 'success' },
   AVAILABLE: { label: 'Available', appearance: 'inprogress' },
   BLOCKED: { label: 'Blocked', appearance: 'removed' },
+  PENDING_APPROVAL: { label: 'Changes pending', appearance: 'moved' },
+  AWAITING_ACTIVATION: { label: 'Awaiting activation', appearance: 'moved' },
   // Payroll runs
   DRAFT: { label: 'Draft', appearance: 'default' },
   SUBMITTED: { label: 'In review', appearance: 'moved' },

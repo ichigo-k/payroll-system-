@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth-config'
 
-const FINANCIAL_ROLES = ['ADMIN', 'PREPARER', 'APPROVER']
+const FINANCIAL_ROLES = ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR']
 const EMPLOYEE_ROLE   = 'EMPLOYEE'
 
 export async function proxy(request: NextRequest) {

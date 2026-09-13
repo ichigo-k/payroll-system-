@@ -33,14 +33,14 @@ function Label({ htmlFor, children, required }: { htmlFor?: string; children: Re
   )
 }
 
-export function InviteUserForm({ employees }: { employees: UnlinkedEmployee[] }) {
+export function InviteUserForm({ employees, defaultRole }: { employees: UnlinkedEmployee[]; defaultRole?: RoleName }) {
   const [state, formAction, pending] = useActionState(inviteUserAction, null)
   const router = useRouter()
   const { showFlag } = useFlags()
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [role, setRole] = useState<RoleName | ''>('')
+  const [role, setRole] = useState<RoleName | ''>(defaultRole ?? '')
   const handled = useRef<typeof state>(null)
 
   // People already on payroll are better given access from the Employees page; the server links them either way

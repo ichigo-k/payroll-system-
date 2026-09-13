@@ -1,49 +1,27 @@
 // src/lib/nav-items.ts
+import { can, type Permission } from './permissions'
 
 export type NavItem = { label: string; href: string }
 
-const PREPARER_ITEMS: NavItem[] = [
-  { label: 'Employees',     href: '/portal/financial/employees' },
-  { label: 'Salary Config', href: '/portal/financial/salary' },
-  { label: 'Tax Config',    href: '/portal/financial/tax' },
-  { label: 'Payroll Prep',  href: '/portal/financial/payroll' },
-  { label: 'Reports',       href: '/portal/financial/reports' },
-]
-
-const APPROVER_ITEMS: NavItem[] = [
-  { label: 'Approval Queue', href: '/portal/financial/approvals' },
-  { label: 'Payroll Review', href: '/portal/financial/review' },
-  { label: 'Reports',        href: '/portal/financial/reports' },
-]
-
-const ADMIN_EXTRA_ITEMS: NavItem[] = [
-  { label: 'User Management', href: '/portal/financial/users' },
-  { label: 'System Config',   href: '/portal/financial/config' },
-  { label: 'Audit Logs',      href: '/portal/financial/audit' },
+const FINANCIAL_NAV: (NavItem & { permission: Permission })[] = [
+  { label: 'Payroll runs', href: '/portal/financial/payroll', permission: 'payroll.view' },
+  { label: 'Approval queue', href: '/portal/financial/approvals', permission: 'payroll.approve' },
+  { label: 'Employees', href: '/portal/financial/employees', permission: 'employees.view' },
+  { label: 'Salaries', href: '/portal/financial/salary', permission: 'salary.view' },
+  { label: 'Tax configuration', href: '/portal/financial/tax', permission: 'tax.view' },
+  { label: 'User management', href: '/portal/financial/users', permission: 'users.view' },
+  { label: 'Company settings', href: '/portal/financial/config', permission: 'settings.view' },
+  { label: 'Reports', href: '/portal/financial/reports', permission: 'reports.export' },
+  { label: 'Audit log', href: '/portal/financial/audit', permission: 'audit.view' },
 ]
 
 export function getFinancialNavItems(role: string): NavItem[] {
-  const items = (() => {
-    switch (role) {
-      case 'PREPARER': return PREPARER_ITEMS
-      case 'APPROVER': return APPROVER_ITEMS
-      case 'ADMIN':    return [...PREPARER_ITEMS, ...APPROVER_ITEMS, ...ADMIN_EXTRA_ITEMS]
-      default:         return []
-    }
-  })()
-
-  // Deduplicate by href — keeps first occurrence
-  const seen = new Set<string>()
-  return items.filter((item) => {
-    if (seen.has(item.href)) return false
-    seen.add(item.href)
-    return true
-  })
+  return FINANCIAL_NAV.filter((item) => can(role, item.permission)).map(({ label, href }) => ({ label, href }))
 }
 
 export const SELF_SERVICE_NAV_ITEMS: NavItem[] = [
-  { label: 'Payslips',        href: '/portal/self-service/payslips' },
-  { label: 'Payment History', href: '/portal/self-service/history' },
-  { label: 'Tax Certificate', href: '/portal/self-service/tax' },
-  { label: 'Profile',         href: '/portal/self-service/profile' },
+  { label: 'Payslips', href: '/portal/self-service/payslips' },
+  { label: 'Payment history', href: '/portal/self-service/history' },
+  { label: 'Tax & SSNIT', href: '/portal/self-service/tax' },
+  { label: 'Profile', href: '/portal/self-service/profile' },
 ]

@@ -57,7 +57,7 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
     const session = await sessionResponse.json() as { user?: { role?: string } }
     const role = session?.user?.role
 
-    const financialRoles = ['ADMIN', 'PREPARER', 'APPROVER']
+    const financialRoles = ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR']
     if (role && financialRoles.includes(role)) {
       router.push('/portal/financial')
     } else {
