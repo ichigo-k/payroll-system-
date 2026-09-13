@@ -1,15 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { Prisma } from '@prisma/client'
-import { ArrowDown, ArrowUp, Plus, Search, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, Search, Upload } from 'lucide-react'
 import { auth } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/app/page-header'
 import { StatusBadge } from '@/components/app/status-badge'
 import { button, field, link } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
-import { EmployeeForm } from './employee-form'
-import { BulkImport } from './bulk-import'
+import { EmployeeAccessActions } from './access-actions'
+import { ROLE_INFO } from '@/lib/roles'
+import { selfServiceState } from '@/lib/user-rules'
+
+const SELF_SERVICE_BADGE = { 'signed-in': 'SIGNED_IN', available: 'AVAILABLE', blocked: 'BLOCKED', unavailable: 'NO_ACCESS' } as const
 
 export const metadata: Metadata = { title: 'Employees' }
 
@@ -29,7 +32,7 @@ const SORTS = {
 } satisfies Record<string, { label: string; orderBy: (dir: Prisma.SortOrder) => Prisma.EmployeeOrderByWithRelationInput[] }>
 type SortKey = keyof typeof SORTS
 
-type Params = { q: string; view: ViewKey; sort: SortKey; dir: Prisma.SortOrder; panel: string }
+type Params = { q: string; view: ViewKey; sort: SortKey; dir: Prisma.SortOrder }
 
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -44,7 +47,6 @@ function hrefWith(params: Params, patch: Partial<Params>) {
     search.set('sort', next.sort)
     search.set('dir', next.dir)
   }
-  if (next.panel) search.set('panel', next.panel)
   const qs = search.toString()
   return `/portal/financial/employees${qs ? `?${qs}` : ''}`
 }
@@ -62,11 +64,11 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     view: viewParam in VIEWS ? (viewParam as ViewKey) : 'all',
     sort: sortParam in SORTS ? (sortParam as SortKey) : 'name',
     dir: first(raw.dir) === 'desc' ? 'desc' : 'asc',
-    panel: ['new', 'import'].includes(first(raw.panel) ?? '') ? (first(raw.panel) as string) : '',
   }
 
   const session = await auth()
   const canEdit = ['ADMIN', 'PREPARER'].includes(session?.user?.role ?? '')
+  const canManageAccess = session?.user?.role === 'ADMIN'
 
   const searchWhere: Prisma.EmployeeWhereInput = params.q
     ? {
@@ -85,6 +87,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     prisma.employee.findMany({
       where: { AND: [VIEWS[params.view].where(), searchWhere] },
       orderBy: SORTS[params.sort].orderBy(params.dir),
+      include: { user: { select: { status: true, lastLogin: true, role: true } } },
       take: 200,
     }),
     prisma.employee.count(),
@@ -108,15 +111,11 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         actions={
           canEdit && (
             <>
-              <Link
-                href={hrefWith(params, { panel: params.panel === 'import' ? '' : 'import' })}
-                aria-pressed={params.panel === 'import'}
-                className={cn(button.default, params.panel === 'import' && 'bg-accent text-primary hover:bg-accent')}
-              >
+              <Link href="/portal/financial/employees/import" className={button.default}>
                 <Upload className="size-4" />
                 Import
               </Link>
-              <Link href={hrefWith(params, { panel: params.panel === 'new' ? '' : 'new' })} className={button.primary}>
+              <Link href="/portal/financial/employees/new" className={button.primary}>
                 <Plus className="size-4" />
                 Add employee
               </Link>
@@ -125,21 +124,8 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         }
       />
 
-      {params.panel && (
-        <section aria-labelledby="panel-title" className="panel-enter mb-6 rounded-lg border border-border bg-muted">
-          <div className="flex items-center justify-between px-5 pt-4">
-            <h2 id="panel-title" className="text-base font-semibold">
-              {params.panel === 'new' ? 'Add employee' : 'Import employees from a spreadsheet'}
-            </h2>
-            <Link href={hrefWith(params, { panel: '' })} aria-label="Close panel" className={button.icon}>
-              <X className="size-4" />
-            </Link>
-          </div>
-          <div className="px-5 pt-3 pb-5">{params.panel === 'new' ? <EmployeeForm canEdit={canEdit} /> : <BulkImport canEdit={canEdit} />}</div>
-        </section>
-      )}
 
-      <nav aria-label="List views" className="flex gap-1 overflow-x-auto border-b-2 border-border">
+      <nav aria-label="List views" className="flex gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-2px_0_var(--border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {viewKeys.map((key) => {
           const active = key === params.view
           return (
@@ -148,7 +134,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
               href={hrefWith(params, { view: key })}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'relative -mb-0.5 flex h-10 items-center gap-1.5 border-b-2 px-2 text-sm font-medium whitespace-nowrap transition-colors duration-150',
+                'flex h-10 shrink-0 items-center gap-1.5 border-b-2 px-2 text-sm font-medium whitespace-nowrap transition-colors duration-150',
                 active ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:border-input hover:text-foreground',
               )}
             >
@@ -183,10 +169,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
               </p>
               {canEdit && (
                 <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  <Link href={hrefWith(params, { panel: 'new' })} className={button.primary}>
+                  <Link href="/portal/financial/employees/new" className={button.primary}>
                     Add employee
                   </Link>
-                  <Link href={hrefWith(params, { panel: 'import' })} className={button.default}>
+                  <Link href="/portal/financial/employees/import" className={button.default}>
                     Import
                   </Link>
                 </div>
@@ -206,7 +192,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b-2 border-border text-left text-xs text-muted-foreground">
                 {(['name', 'id', 'department', 'start'] as SortKey[]).map((key, index) => {
@@ -233,6 +219,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                 <th scope="col" className="px-4 py-0 font-semibold">
                   Status
                 </th>
+                <th scope="col" className="px-4 py-0 font-semibold">
+                  Access
+                </th>
+                {canManageAccess && (
+                  <th scope="col" className="w-12 py-0 pl-2">
+                    <span className="sr-only">Access actions</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -259,6 +253,24 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                   <td className="px-4 py-2">
                     <StatusBadge status={employee.employmentStatus} />
                   </td>
+                  <td className="px-4 py-2">
+                    <StatusBadge status={SELF_SERVICE_BADGE[selfServiceState(employee)]} />
+                    {employee.user && employee.user.role !== 'EMPLOYEE' && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">{ROLE_INFO[employee.user.role].label}</span>
+                    )}
+                  </td>
+                  {canManageAccess && (
+                    <td className="py-2 pl-2 text-right">
+                      <EmployeeAccessActions
+                        employeeId={employee.id}
+                        name={`${employee.firstName} ${employee.lastName}`}
+                        email={employee.email}
+                        state={selfServiceState(employee)}
+                        role={employee.user?.role ?? null}
+                        terminated={employee.employmentStatus === 'TERMINATED'}
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

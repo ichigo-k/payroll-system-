@@ -3,9 +3,17 @@
 import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth-config'
+import { parseEmployeeCsv } from '@/lib/csv'
+import { ensureDepartment } from '@/lib/departments'
 import { prisma } from '@/lib/prisma'
 
-export type ActionState = { status: 'idle' | 'success' | 'error'; message?: string }
+export type ActionState = {
+  status: 'idle' | 'success' | 'error'
+  message?: string
+  fieldErrors?: Record<string, string>
+  /** Submitted values, so the form keeps what was typed when there are errors */
+  values?: Record<string, string>
+}
 
 async function requireEditor() {
   const session = await auth()
@@ -13,96 +21,124 @@ async function requireEditor() {
   return session.user.id
 }
 
+function text(formData: FormData, key: string) {
+  return String(formData.get(key) ?? '').trim()
+}
+
 export async function createEmployee(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = await requireEditor()
   if (!userId) return { status: 'error', message: 'Only administrators and payroll preparers can add employees.' }
 
-  const firstName = String(formData.get('firstName') ?? '').trim()
-  const lastName = String(formData.get('lastName') ?? '').trim()
-  const email = String(formData.get('email') ?? '').trim().toLowerCase()
-  const employeeId = String(formData.get('employeeId') ?? '').trim()
-  const department = String(formData.get('department') ?? 'General').trim() || 'General'
-  const startDate = String(formData.get('startDate') ?? '')
-
-  if (!firstName || !lastName || !email || !employeeId || !startDate) {
-    return { status: 'error', message: 'Complete all required fields.' }
+  const data = {
+    firstName: text(formData, 'firstName'),
+    lastName: text(formData, 'lastName'),
+    email: text(formData, 'email').toLowerCase(),
+    phone: text(formData, 'phone'),
+    employeeId: text(formData, 'employeeId'),
+    ssnitNumber: text(formData, 'ssnitNumber'),
+    department: text(formData, 'department'),
+    designation: text(formData, 'designation'),
+    startDate: text(formData, 'startDate'),
+    bankName: text(formData, 'bankName'),
+    accountName: text(formData, 'accountName'),
+    accountNumber: text(formData, 'accountNumber'),
   }
 
+  const fieldErrors: Record<string, string> = {}
+  if (!data.firstName) fieldErrors.firstName = 'Enter a first name.'
+  if (!data.lastName) fieldErrors.lastName = 'Enter a last name.'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) fieldErrors.email = 'Enter a valid work email.'
+  if (!data.employeeId) fieldErrors.employeeId = 'Enter an employee ID.'
+  if (!data.department) fieldErrors.department = 'Choose or add a department.'
+  if (!data.startDate || Number.isNaN(new Date(data.startDate).getTime())) fieldErrors.startDate = 'Choose a start date.'
+  if (Object.keys(fieldErrors).length) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors, values: data }
+
   try {
-    await prisma.employee.create({
-      data: { firstName, lastName, email, employeeId, department, startDate: new Date(startDate), createdBy: userId },
+    await prisma.$transaction(async (tx) => {
+      // New departments typed into the picker are saved here, so they're available next time
+      const department = await ensureDepartment(data.department, tx)
+      await tx.employee.create({
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone || null,
+          employeeId: data.employeeId,
+          ssnit_number: data.ssnitNumber || null,
+          department,
+          designation: data.designation || null,
+          startDate: new Date(data.startDate),
+          bankName: data.bankName || null,
+          accountName: data.accountName || null,
+          accountNumber: data.accountNumber || null,
+          createdBy: userId,
+        },
+      })
     })
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-      return { status: 'error', message: 'An employee with this email or employee ID already exists.' }
+      const target = String((err.meta as { target?: unknown } | undefined)?.target ?? '')
+      if (target.includes('email')) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors: { email: 'An employee with this email already exists.' }, values: data }
+      if (target.includes('ssnit')) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors: { ssnitNumber: 'This SSNIT number is already on another employee.' }, values: data }
+      if (target.includes('employee')) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors: { employeeId: 'This employee ID is already in use.' }, values: data }
+      return { status: 'error', message: 'An employee with these details already exists.', values: data }
     }
     throw err
   }
 
   revalidatePath('/portal/financial/employees')
   revalidatePath('/portal/financial')
-  return { status: 'success', message: `${firstName} ${lastName} was added.` }
-}
-
-/** Splits one CSV line, honouring double-quoted fields that contain commas. */
-function parseCsvLine(line: string) {
-  const values: string[] = []
-  let current = ''
-  let quoted = false
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-    if (char === '"') {
-      if (quoted && line[i + 1] === '"') {
-        current += '"'
-        i++
-      } else {
-        quoted = !quoted
-      }
-    } else if (char === ',' && !quoted) {
-      values.push(current.trim())
-      current = ''
-    } else {
-      current += char
-    }
-  }
-  values.push(current.trim())
-  return values
+  return { status: 'success', message: `${data.firstName} ${data.lastName} was added.` }
 }
 
 export async function importEmployees(formData: FormData) {
   const userId = await requireEditor()
   if (!userId) throw new Error('Only administrators and payroll preparers can import employees.')
-  const csv = String(formData.get('csv') ?? '')
-  const lines = csv.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-  if (lines.length < 2) throw new Error('The file has no employee rows.')
-  const headers = parseCsvLine(lines[0]).map((value) => value.toLowerCase())
-  const required = ['first_name', 'last_name', 'email', 'employee_id', 'start_date']
-  const missing = required.filter((header) => !headers.includes(header))
-  if (missing.length) throw new Error(`Missing required columns: ${missing.join(', ')}.`)
-  const index = (header: string) => headers.indexOf(header)
-  const rows = lines.slice(1).map((line, rowIndex) => {
-    const values = parseCsvLine(line)
-    const firstName = values[index('first_name')] ?? ''
-    const lastName = values[index('last_name')] ?? ''
-    const email = (values[index('email')] ?? '').toLowerCase()
-    const employeeId = values[index('employee_id')] ?? ''
-    const startDate = values[index('start_date')] ?? ''
-    if (!firstName || !lastName || !email || !employeeId || !startDate || Number.isNaN(new Date(startDate).getTime())) {
-      throw new Error(`Row ${rowIndex + 2} is missing a required value or has an invalid start date.`)
-    }
-    return { firstName, lastName, email, employeeId, startDate: new Date(startDate), department: (index('department') >= 0 && values[index('department')]) || 'General', createdBy: userId }
+
+  const { rows, error } = parseEmployeeCsv(String(formData.get('csv') ?? ''))
+  if (error) throw new Error(error)
+  const valid = rows.filter((row) => row.errors.length === 0)
+  if (valid.length === 0) throw new Error('No rows are ready to import. Fix the errors in the file and try again.')
+
+  const existing = await prisma.employee.findMany({
+    where: { OR: [{ email: { in: valid.map((row) => row.email) } }, { employeeId: { in: valid.map((row) => row.employeeId) } }] },
+    select: { email: true, employeeId: true },
   })
-  const existing = await prisma.employee.findMany({ where: { OR: [{ email: { in: rows.map((row) => row.email) } }, { employeeId: { in: rows.map((row) => row.employeeId) } }] }, select: { email: true, employeeId: true } })
-  const seenEmails = new Set(existing.map((employee) => employee.email))
-  const seenIds = new Set(existing.map((employee) => employee.employeeId))
-  const fresh = rows.filter((row) => {
-    if (seenEmails.has(row.email) || seenIds.has(row.employeeId)) return false
-    seenEmails.add(row.email)
-    seenIds.add(row.employeeId)
-    return true
-  })
-  if (fresh.length) await prisma.employee.createMany({ data: fresh, skipDuplicates: true })
+  const takenEmails = new Set(existing.map((e) => e.email))
+  const takenIds = new Set(existing.map((e) => e.employeeId))
+  const fresh = valid.filter((row) => !takenEmails.has(row.email) && !takenIds.has(row.employeeId))
+
+  // Create each distinct department once, reusing existing spellings
+  const departmentNames = new Map<string, string>()
+  for (const row of fresh) {
+    const key = (row.department || 'General').toLowerCase()
+    if (!departmentNames.has(key)) departmentNames.set(key, await ensureDepartment(row.department || 'General'))
+  }
+
+  if (fresh.length) {
+    await prisma.employee.createMany({
+      skipDuplicates: true,
+      data: fresh.map((row) => ({
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        employeeId: row.employeeId,
+        startDate: new Date(row.startDate),
+        department: departmentNames.get((row.department || 'General').toLowerCase()) ?? 'General',
+        designation: row.designation || null,
+        phone: row.phone || null,
+        ssnit_number: row.ssnitNumber || null,
+        createdBy: userId,
+      })),
+    })
+  }
+
   revalidatePath('/portal/financial/employees')
   revalidatePath('/portal/financial')
-  return { imported: fresh.length, skipped: rows.length - fresh.length }
+  return {
+    imported: fresh.length,
+    duplicates: valid.length - fresh.length,
+    invalid: rows.length - valid.length,
+    departmentsCreated: departmentNames.size,
+  }
 }

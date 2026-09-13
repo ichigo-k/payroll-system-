@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { Menu } from '@base-ui/react/menu'
-import { ChevronDown, ClipboardList, Percent, Plus, Upload, UserPlus } from 'lucide-react'
+import { ChevronDown, ClipboardList, KeyRound, Percent, Plus, Upload, UserPlus } from 'lucide-react'
 import { button } from './styles'
 
 const ITEMS = [
-  { label: 'Employee', description: 'Add one person to payroll', href: '/portal/financial/employees?panel=new', icon: UserPlus, roles: ['ADMIN', 'PREPARER'] },
-  { label: 'Import employees', description: 'Upload a CSV of your staff', href: '/portal/financial/employees?panel=import', icon: Upload, roles: ['ADMIN', 'PREPARER'] },
+  { label: 'Employee', description: 'Add one person to payroll', href: '/portal/financial/employees/new', icon: UserPlus, roles: ['ADMIN', 'PREPARER'] },
+  { label: 'Import employees', description: 'Upload a CSV of your staff', href: '/portal/financial/employees/import', icon: Upload, roles: ['ADMIN', 'PREPARER'] },
   { label: 'Payroll run', description: 'Prepare this month’s pay', href: '/portal/financial/payroll', icon: ClipboardList, roles: ['ADMIN', 'PREPARER'] },
+  { label: 'User', description: 'Invite someone and choose their role', href: '/portal/financial/users/invite', icon: KeyRound, roles: ['ADMIN'] },
   { label: 'Tax configuration', description: 'PAYE brackets and SSNIT rates', href: '/portal/financial/tax?new=1', icon: Percent, roles: ['ADMIN'] },
 ]
 

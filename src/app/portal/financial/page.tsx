@@ -43,7 +43,7 @@ export default async function FinancialDashboardPage() {
   ]
 
   const setup = [
-    { label: 'Add employees', detail: activeEmployees ? `${activeEmployees} active on payroll` : 'Add people or import a spreadsheet', done: activeEmployees > 0, href: '/portal/financial/employees?panel=new' },
+    { label: 'Add employees', detail: activeEmployees ? `${activeEmployees} active on payroll` : 'Add people or import a spreadsheet', done: activeEmployees > 0, href: '/portal/financial/employees/new' },
     { label: 'Configure PAYE and SSNIT', detail: taxConfigCount ? 'Active tax configuration in place' : 'Set brackets, reliefs and SSNIT rates', done: taxConfigCount > 0, href: '/portal/financial/tax' },
     { label: 'Set salaries', detail: activeEmployees ? `${employeesWithSalary} of ${activeEmployees} employees have a salary` : 'Assign base salary and allowances', done: activeEmployees > 0 && employeesWithSalary >= activeEmployees, href: '/portal/financial/salary' },
     { label: 'Run first payroll', detail: recentRuns.length ? 'Payroll history started' : 'Prepare, submit and approve a run', done: recentRuns.length > 0, href: '/portal/financial/payroll' },

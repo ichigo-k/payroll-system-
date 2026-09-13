@@ -1,63 +1,128 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
-import { CircleAlert, CircleCheck } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { CircleAlert } from 'lucide-react'
+import { DepartmentCombobox } from '@/components/app/department-combobox'
+import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
+import { cn } from '@/lib/utils'
 import { type ActionState, createEmployee } from './actions'
 
 const initialState: ActionState = { status: 'idle' }
 
-const inputClass = field
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  required,
+  hint,
+  error,
+  children,
+}: {
+  label: string
+  htmlFor: string
+  required?: boolean
+  hint?: string
+  error?: string
+  children: React.ReactNode
+}) {
   return (
-    // biome-ignore lint/a11y/noLabelWithoutControl: the input is passed in as children
-    <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
-      <span>
-        {required && <abbr title="required" className="mr-0.5 text-danger no-underline">*</abbr>}
+    <div className="grid content-start gap-1">
+      <label htmlFor={htmlFor} className="text-xs font-semibold text-muted-foreground">
         {label}
-      </span>
+        {required && <span className="ml-0.5 text-danger">*</span>}
+      </label>
       {children}
-    </label>
+      {error ? (
+        <p className="flex items-center gap-1 text-xs text-danger">
+          <CircleAlert className="size-3.5 shrink-0" />
+          {error}
+        </p>
+      ) : (
+        hint && <p className="text-xs text-subtlest">{hint}</p>
+      )}
+    </div>
   )
 }
 
-export function EmployeeForm({ canEdit }: { canEdit: boolean }) {
+function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-4 border-b border-border py-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
+      <div>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+    </section>
+  )
+}
+
+export function EmployeeForm({ departments }: { departments: string[] }) {
   const [state, formAction, pending] = useActionState(createEmployee, initialState)
-  const formRef = useRef<HTMLFormElement>(null)
+  const router = useRouter()
+  const { showFlag } = useFlags()
+  const handled = useRef<ActionState | null>(null)
+  const errors = state.fieldErrors ?? {}
+  const values = state.values ?? {}
 
   useEffect(() => {
-    if (state.status === 'success') formRef.current?.reset()
-  }, [state])
+    if (state.status !== 'success' || handled.current === state) return
+    handled.current = state
+    showFlag({ tone: 'success', title: state.message ?? 'Employee added.' })
+    router.push('/portal/financial/employees')
+  }, [state, showFlag, router])
 
-  if (!canEdit) {
-    return <p className="text-sm text-muted-foreground">Only administrators and payroll preparers can add employees.</p>
-  }
+  const inputClass = (key: string) => cn(field, errors[key] && 'border-danger')
 
   return (
-    <form ref={formRef} action={formAction} className="grid gap-3">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="First name" required>
-          <input required name="firstName" autoComplete="off" className={inputClass} />
+    <form action={formAction} noValidate className="border-t border-border">
+      <Section title="Personal details" description="How this person appears on payslips and how we reach them.">
+        <Field label="First name" htmlFor="firstName" required error={errors.firstName}>
+          <input id="firstName" name="firstName" defaultValue={values.firstName} autoComplete="off" aria-invalid={!!errors.firstName} className={inputClass('firstName')} />
         </Field>
-        <Field label="Last name" required>
-          <input required name="lastName" autoComplete="off" className={inputClass} />
+        <Field label="Last name" htmlFor="lastName" required error={errors.lastName}>
+          <input id="lastName" name="lastName" defaultValue={values.lastName} autoComplete="off" aria-invalid={!!errors.lastName} className={inputClass('lastName')} />
         </Field>
-        <Field label="Work email" required>
-          <input required type="email" name="email" autoComplete="off" className={inputClass} />
+        <Field label="Work email" htmlFor="email" required error={errors.email} hint="They’ll use this to sign in to self-service.">
+          <input id="email" name="email" defaultValue={values.email} type="email" autoComplete="off" aria-invalid={!!errors.email} className={inputClass('email')} />
         </Field>
-        <Field label="Employee ID" required>
-          <input required name="employeeId" autoComplete="off" className={`${inputClass} font-mono`} />
+        <Field label="Phone" htmlFor="phone">
+          <input id="phone" name="phone" defaultValue={values.phone} type="tel" autoComplete="off" placeholder="+233" className={field} />
         </Field>
-        <Field label="Department">
-          <input name="department" defaultValue="General" className={inputClass} />
-        </Field>
-        <Field label="Start date" required>
-          <input required type="date" name="startDate" className={inputClass} />
-        </Field>
-      </div>
+      </Section>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+      <Section title="Employment" description="Where they sit in the organisation and when they started.">
+        <Field label="Employee ID" htmlFor="employeeId" required error={errors.employeeId}>
+          <input id="employeeId" name="employeeId" defaultValue={values.employeeId} autoComplete="off" aria-invalid={!!errors.employeeId} className={cn(inputClass('employeeId'), 'font-mono')} />
+        </Field>
+        <Field label="Department" htmlFor="department" required error={errors.department} hint="Pick one, or type a new name and choose Add.">
+          <DepartmentCombobox id="department" name="department" departments={departments} defaultValue={values.department} required />
+        </Field>
+        <Field label="Job title" htmlFor="designation">
+          <input id="designation" name="designation" defaultValue={values.designation} autoComplete="off" className={field} />
+        </Field>
+        <Field label="Start date" htmlFor="startDate" required error={errors.startDate}>
+          <input id="startDate" name="startDate" defaultValue={values.startDate} type="date" aria-invalid={!!errors.startDate} className={inputClass('startDate')} />
+        </Field>
+      </Section>
+
+      <Section title="Statutory and bank details" description="Optional now. Needed before this person can be paid.">
+        <Field label="SSNIT number" htmlFor="ssnitNumber" error={errors.ssnitNumber}>
+          <input id="ssnitNumber" name="ssnitNumber" defaultValue={values.ssnitNumber} autoComplete="off" aria-invalid={!!errors.ssnitNumber} className={cn(inputClass('ssnitNumber'), 'font-mono')} />
+        </Field>
+        <Field label="Bank name" htmlFor="bankName">
+          <input id="bankName" name="bankName" defaultValue={values.bankName} autoComplete="off" className={field} />
+        </Field>
+        <Field label="Account name" htmlFor="accountName">
+          <input id="accountName" name="accountName" defaultValue={values.accountName} autoComplete="off" className={field} />
+        </Field>
+        <Field label="Account number" htmlFor="accountNumber">
+          <input id="accountNumber" name="accountNumber" defaultValue={values.accountNumber} inputMode="numeric" autoComplete="off" className={cn(field, 'font-mono')} />
+        </Field>
+      </Section>
+
+      <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card py-3">
         <div aria-live="polite" className="min-h-5 text-sm">
           {state.status === 'error' && (
             <p className="flex items-center gap-1.5 text-danger">
@@ -65,20 +130,15 @@ export function EmployeeForm({ canEdit }: { canEdit: boolean }) {
               {state.message}
             </p>
           )}
-          {state.status === 'success' && (
-            <p className="flex items-center gap-1.5 text-success">
-              <CircleCheck className="size-4 shrink-0" />
-              {state.message}
-            </p>
-          )}
         </div>
-        <button
-          type="submit"
-          disabled={pending}
-          className={button.primary}
-        >
-          {pending ? 'Adding' : 'Add employee'}
-        </button>
+        <div className="flex gap-2">
+          <Link href="/portal/financial/employees" className={button.subtle}>
+            Cancel
+          </Link>
+          <button type="submit" disabled={pending} className={button.primary}>
+            {pending ? 'Adding employee' : 'Add employee'}
+          </button>
+        </div>
       </div>
     </form>
   )
