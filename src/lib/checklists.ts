@@ -55,7 +55,7 @@ const CHECKLISTS: Partial<Record<RoleName, { title: string; steps: Step[] }>> = 
       {
         key: 'admin.invite-preparer',
         label: 'Invite a payroll preparer',
-        description: 'They add employees, set salaries and prepare payroll runs.',
+        description: 'They set up pay and prepare payroll runs.',
         href: '/portal/financial/users/invite?role=PREPARER',
         cta: 'Invite a preparer',
         scope: 'workspace',
@@ -71,6 +71,15 @@ const CHECKLISTS: Partial<Record<RoleName, { title: string; steps: Step[] }>> = 
         detect: async () => (await prisma.user.count({ where: { role: 'APPROVER', status: 'active' } })) > 0,
       },
       {
+        key: 'admin.add-employees',
+        label: 'Add employees',
+        description: 'Add people one at a time or import your staff list. Preparers are asked to set up their pay.',
+        href: '/portal/financial/employees/new',
+        cta: 'Add employees',
+        scope: 'workspace',
+        detect: async () => (await prisma.employee.count()) > 0,
+      },
+      {
         key: 'admin.review-audit-log',
         label: 'Look through the audit log',
         description: 'See how every change, approval and sign-in is recorded.',
@@ -84,18 +93,9 @@ const CHECKLISTS: Partial<Record<RoleName, { title: string; steps: Step[] }>> = 
     title: 'Get payroll ready',
     steps: [
       {
-        key: 'preparer.add-employees',
-        label: 'Add employees',
-        description: 'Add people one at a time or import your staff list from a spreadsheet.',
-        href: '/portal/financial/employees/new',
-        cta: 'Add employees',
-        scope: 'workspace',
-        detect: async () => (await prisma.employee.count()) > 0,
-      },
-      {
         key: 'preparer.set-salaries',
         label: 'Set salaries',
-        description: 'Everyone active needs a basic salary to be included in payroll.',
+        description: 'Everyone active needs a basic salary to be included in payroll. Administrators add the people.',
         href: '/portal/financial/salary?view=missing',
         cta: 'Set salaries',
         scope: 'workspace',

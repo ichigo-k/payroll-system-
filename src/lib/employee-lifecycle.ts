@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ROLE_INFO } from '@/lib/roles'
 
 /**
- * Offboarding, reinstating and deleting employees. Callers check `employees.edit` first.
+ * Offboarding, reinstating and deleting employees. Callers check `employees.edit` (administrators) first.
  * Every change is audited, and approvers hear about leavers before the next run.
  */
 

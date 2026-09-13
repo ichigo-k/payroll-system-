@@ -4,7 +4,8 @@ import type { RoleName } from './roles'
  * Who can do what. The single source of truth for navigation, pages and server actions.
  *
  * Built on segregation of duties:
- * - Admins run the system (users, settings) but can't touch payroll data.
+ * - Admins run the system (users, settings) and keep employee records (HR), but can't see or change pay.
+ * - Whoever adds a person can't also set their pay, which blocks "ghost employees".
  * - Preparers make changes (maker); approvers check them (checker). Nobody approves their own work.
  * - Auditors can see everything and change nothing.
  */
@@ -16,11 +17,13 @@ export const PERMISSIONS = {
   'audit.view': ['ADMIN', 'APPROVER', 'AUDITOR'],
 
   'employees.view': ['ADMIN', 'PREPARER', 'APPROVER', 'AUDITOR'],
-  'employees.edit': ['PREPARER'],
+  /** Personal, job and bank details, plus joining and leaving. Bank details stay away from the people who run payroll. */
+  'employees.edit': ['ADMIN'],
   /** Workspace roles and self-service blocking are access decisions, so they belong to admins */
   'employees.access': ['ADMIN'],
 
   'salary.view': ['PREPARER', 'APPROVER', 'AUDITOR'],
+  /** Salary, allowances, deductions, and SSNIT number and TIN */
   'salary.edit': ['PREPARER'],
 
   'tax.view': ['PREPARER', 'APPROVER', 'AUDITOR'],

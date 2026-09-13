@@ -25,7 +25,7 @@ export function parseCsvLine(line: string) {
 
 export const EMPLOYEE_IMPORT_COLUMNS = {
   required: ['first_name', 'last_name', 'email', 'start_date'],
-  optional: ['employee_id', 'department', 'designation', 'phone', 'ssnit_number'],
+  optional: ['employee_id', 'department', 'designation', 'phone'],
 } as const
 
 export type EmployeeImportRow = {
@@ -38,7 +38,6 @@ export type EmployeeImportRow = {
   department: string
   designation: string
   phone: string
-  ssnitNumber: string
   errors: string[]
 }
 
@@ -70,7 +69,6 @@ export function parseEmployeeCsv(csv: string): { rows: EmployeeImportRow[]; erro
       department: col(values, 'department'),
       designation: col(values, 'designation'),
       phone: col(values, 'phone'),
-      ssnitNumber: col(values, 'ssnit_number'),
       errors: [],
     }
     if (!row.firstName) row.errors.push('First name is missing')

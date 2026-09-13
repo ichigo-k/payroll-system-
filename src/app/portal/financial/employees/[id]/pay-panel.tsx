@@ -1,10 +1,13 @@
 'use client'
 
 import { formatPercentChange, salaryChangePercent } from '@/lib/pay-items'
+import { Pencil } from 'lucide-react'
+import { button } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { AddButton, type PayDialog, PayEditor, type PayItem, RowButtons } from './pay-editor'
 
 export type PayData = {
+  statutory: { ssnitNumber: string | null; tin: string | null }
   salaries: { id: string; amount: number; from: string; to: string | null; reason: string | null }[]
   allowances: PayItem[]
   deductions: PayItem[]
@@ -41,6 +44,34 @@ export function PayPanel({ employeeId, data, canEdit, initialDialog, terminated 
 
   const content = (open?: (d: PayDialog) => void) => (
     <>
+      <Section
+        title="Statutory numbers"
+        description="Needed for the SSNIT and GRA PAYE schedules."
+        action={
+          editable &&
+          open && (
+            <button type="button" onClick={() => open({ kind: 'statutory' })} className={button.default}>
+              <Pencil className="size-4" />
+              Edit
+            </button>
+          )
+        }
+      >
+        <dl className="grid max-w-3xl gap-2 text-sm sm:grid-cols-2">
+          {(
+            [
+              ['SSNIT number', data.statutory.ssnitNumber],
+              ['TIN / Ghana Card', data.statutory.tin],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="grid grid-cols-[140px_minmax(0,1fr)] gap-3">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className={value ? 'font-mono text-foreground' : 'font-medium text-danger'}>{value ?? 'Missing'}</dd>
+            </div>
+          ))}
+        </dl>
+      </Section>
+
       <Section
         title="Basic salary"
         description={
@@ -130,7 +161,7 @@ export function PayPanel({ employeeId, data, canEdit, initialDialog, terminated 
 
   if (!editable) return content()
   return (
-    <PayEditor employeeId={employeeId} currentSalary={current?.amount ?? null} initialDialog={initialDialog ? { kind: initialDialog } : null}>
+    <PayEditor employeeId={employeeId} currentSalary={current?.amount ?? null} statutory={data.statutory} initialDialog={initialDialog ? { kind: initialDialog } : null}>
       {(open) => content(open)}
     </PayEditor>
   )

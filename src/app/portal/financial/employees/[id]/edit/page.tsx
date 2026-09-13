@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: 'Edit employee' }
 
 export default async function EditEmployeePage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requirePermission('employees.edit')
-  if (!actor) return <NoPermission title="You can’t edit employees" description="Only payroll preparers can change employee records." />
+  if (!actor) return <NoPermission title="You can’t edit employees" description="Only administrators can change employee records. Pay is set up on the Pay tab by payroll preparers." />
 
   const { id } = await params
   const [employee, departments] = await Promise.all([prisma.employee.findUnique({ where: { id } }), listDepartments()])

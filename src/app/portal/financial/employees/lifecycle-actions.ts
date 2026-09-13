@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { type ActionResult, requirePermission } from '@/lib/access'
 import * as lifecycle from '@/lib/employee-lifecycle'
 
-const denied: ActionResult = { ok: false, message: 'Only payroll preparers can change employment records.' }
+const denied: ActionResult = { ok: false, message: 'Only administrators can change employment records.' }
 
 function refresh(employeeId: string) {
   revalidatePath('/portal/financial/employees')

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { Prisma } from '@prisma/client'
 import { type ActionResult, audit, requirePermission } from '@/lib/access'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
 import { allowanceTypeFor, cleanItemName, deductionTypeFor, formatPercentChange, payItemName, SALARY_CHANGE_REASONS, salaryChangePercent } from '@/lib/pay-items'
@@ -28,6 +29,7 @@ async function guard(employeeId: string) {
   if (!actor) return { error: { ok: false, message: 'Only payroll preparers can change pay.' } as ActionResult }
   const employee = await prisma.employee.findUnique({ where: { id: employeeId }, select: { id: true, firstName: true, lastName: true, employmentStatus: true } })
   if (!employee) return { error: { ok: false, message: 'That employee no longer exists.' } as ActionResult }
+  if (actor.employeeId === employee.id) return { error: { ok: false, message: 'You can’t change your own pay. Ask another preparer.' } as ActionResult }
   return { actor, employee }
 }
 
@@ -225,4 +227,31 @@ export async function endDeductionAction(employeeId: string, deductionId: string
   await audit({ userId: g.actor.id, action: 'DELETE', entityType: 'Employee', entityId: employeeId, changes: { deduction: { id: deduction.id, name: payItemName(deduction, 'deduction'), amount: money(Number(deduction.amount)) }, ended: true } })
   refresh(employeeId)
   return { ok: true, message: `${payItemName(deduction, 'deduction')} ended.` }
+}
+
+/** SSNIT number and TIN: needed for the SSNIT and GRA PAYE schedules, so they sit with pay. */
+export async function updateStatutoryAction(employeeId: string, input: { ssnitNumber: string; tin: string }): Promise<ActionResult> {
+  const g = await guard(employeeId)
+  if ('error' in g) return g.error as ActionResult
+  const clean = (value: string) => value.replace(/\s+/g, '').toUpperCase().slice(0, 30) || null
+  const next = { ssnit_number: clean(input.ssnitNumber), tin: clean(input.tin) }
+  const existing = await prisma.employee.findUnique({ where: { id: employeeId }, select: { ssnit_number: true, tin: true } })
+  if (!existing) return { ok: false, message: 'That employee no longer exists.' }
+
+  const changes: Record<string, { from: string | null; to: string | null }> = {}
+  if (existing.ssnit_number !== next.ssnit_number) changes.ssnitNumber = { from: existing.ssnit_number, to: next.ssnit_number }
+  if (existing.tin !== next.tin) changes.tin = { from: existing.tin, to: next.tin }
+  if (Object.keys(changes).length === 0) return { ok: true, message: 'No changes to save.' }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.employee.update({ where: { id: employeeId }, data: next })
+      await audit({ userId: g.actor.id, action: 'UPDATE', entityType: 'Employee', entityId: employeeId, changes }, tx)
+    })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return { ok: false, message: 'That SSNIT number is already on another employee.' }
+    throw err
+  }
+  refresh(employeeId)
+  return { ok: true, message: 'Statutory numbers saved. Recalculate any draft run to clear the missing-details flags.' }
 }

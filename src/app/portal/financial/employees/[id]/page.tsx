@@ -220,7 +220,8 @@ export default async function EmployeePage({ params, searchParams }: { params: P
 async function PayTab({ employeeId, canEdit, terminated, base, raw }: { employeeId: string; canEdit: boolean; terminated: boolean; base: string; raw: Record<string, string | string[] | undefined> }) {
   const edit = ['salary', 'allowance', 'deduction'].includes(String(raw.edit)) ? (raw.edit as 'salary' | 'allowance' | 'deduction') : undefined
   const { page, pageSize, skip, take } = parsePage(raw, 10)
-  const [salaries, allowances, deductions, lines, totalLines] = await Promise.all([
+  const [statutory, salaries, allowances, deductions, lines, totalLines] = await Promise.all([
+    prisma.employee.findUnique({ where: { id: employeeId }, select: { ssnit_number: true, tin: true } }),
     prisma.salaryConfiguration.findMany({ where: { employeeId }, orderBy: { effectiveFrom: 'desc' } }),
     prisma.allowance.findMany({ where: { employeeId, isActive: true }, orderBy: { createdAt: 'asc' } }),
     prisma.deduction.findMany({ where: { employeeId, isActive: true }, orderBy: { createdAt: 'asc' } }),
@@ -236,6 +237,7 @@ async function PayTab({ employeeId, canEdit, terminated, base, raw }: { employee
         terminated={terminated}
         initialDialog={edit}
         data={{
+          statutory: { ssnitNumber: statutory?.ssnit_number ?? null, tin: statutory?.tin ?? null },
           salaries: salaries.map((s) => ({ id: s.id, amount: Number(s.baseSalary), from: s.effectiveFrom.toISOString(), to: s.effectiveTo?.toISOString() ?? null, reason: s.reason })),
           allowances: allowances.map((a) => ({ id: a.id, name: payItemName(a, 'allowance'), amount: Number(a.amount), frequency: a.frequency })),
           deductions: deductions.map((d) => ({

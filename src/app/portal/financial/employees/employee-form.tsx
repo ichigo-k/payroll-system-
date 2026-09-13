@@ -74,8 +74,8 @@ export function EmployeeForm({ departments, initial, employeeId }: { departments
     if (state.status !== 'success' || handled.current === state) return
     handled.current = state
     showFlag({ tone: 'success', title: state.message ?? 'Saved.' })
-    router.push(state.employeeId ? `/portal/financial/employees/${state.employeeId}${editing ? '' : '?tab=pay'}` : '/portal/financial/employees')
-  }, [state, showFlag, router, editing])
+    router.push(state.employeeId ? `/portal/financial/employees/${state.employeeId}` : '/portal/financial/employees')
+  }, [state, showFlag, router])
 
   const inputClass = (key: string) => cn(field, errors[key] && 'border-danger')
 
@@ -130,13 +130,7 @@ export function EmployeeForm({ departments, initial, employeeId }: { departments
         )}
       </Section>
 
-      <Section title="Statutory and bank details" description="Needed before this person can be paid. Bank detail changes are flagged to approvers and the employee is emailed.">
-        <Field label="SSNIT number" htmlFor="ssnitNumber" error={errors.ssnitNumber}>
-          <input id="ssnitNumber" name="ssnitNumber" defaultValue={values.ssnitNumber} autoComplete="off" aria-invalid={!!errors.ssnitNumber} className={cn(inputClass('ssnitNumber'), 'font-mono')} />
-        </Field>
-        <Field label="TIN / Ghana Card number" htmlFor="tin" hint="Needed on the GRA PAYE schedule.">
-          <input id="tin" name="tin" defaultValue={values.tin} autoComplete="off" placeholder="GHA-000000000-0" className={cn(field, 'font-mono')} />
-        </Field>
+      <Section title="Bank details" description="The account their salary is paid into. Changes are flagged to approvers and the employee is emailed.">
         <Field label="Bank name" htmlFor="bankName">
           <BankCombobox id="bankName" name="bankName" defaultValue={values.bankName} />
         </Field>

@@ -31,8 +31,6 @@ function readForm(formData: FormData) {
     lastName: text(formData, 'lastName'),
     email: text(formData, 'email').toLowerCase(),
     phone: text(formData, 'phone'),
-    ssnitNumber: text(formData, 'ssnitNumber'),
-    tin: text(formData, 'tin'),
     department: text(formData, 'department'),
     designation: text(formData, 'designation'),
     startDate: text(formData, 'startDate'),
@@ -58,11 +56,7 @@ function validate(data: FormValues) {
 function uniqueError(err: unknown, data: FormValues): ActionState | null {
   if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== 'P2002') return null
   const target = String((err.meta as { target?: unknown } | undefined)?.target ?? '')
-  const fieldErrors: Record<string, string> | undefined = target.includes('email')
-    ? { email: 'An employee with this email already exists.' }
-    : target.includes('ssnit')
-      ? { ssnitNumber: 'This SSNIT number is already on another employee.' }
-      : undefined
+  const fieldErrors: Record<string, string> | undefined = target.includes('email') ? { email: 'An employee with this email already exists.' } : undefined
   return { status: 'error', message: fieldErrors ? 'Fix the highlighted fields.' : 'An employee with these details already exists.', fieldErrors, values: data }
 }
 
@@ -72,8 +66,6 @@ function toRecord(data: FormValues, department: string) {
     lastName: data.lastName,
     email: data.email,
     phone: data.phone || null,
-    ssnit_number: data.ssnitNumber || null,
-    tin: data.tin || null,
     department,
     designation: data.designation || null,
     startDate: new Date(data.startDate),
@@ -92,7 +84,7 @@ function refresh(id?: string) {
 
 export async function createEmployee(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requirePermission('employees.edit')
-  if (!actor) return { status: 'error', message: 'Only payroll preparers can add employees.' }
+  if (!actor) return { status: 'error', message: 'Only administrators can add employees.' }
 
   const data = readForm(formData)
   const fieldErrors = validate(data)
@@ -120,13 +112,21 @@ export async function createEmployee(_prev: ActionState, formData: FormData): Pr
   }
   if (!created) return { status: 'error', message: 'Couldn’t assign an employee ID. Please try again.', values: data }
 
+  // Hand over to payroll: preparers set up salary, SSNIT and TIN
+  await notify(await userIdsWithRoles(['PREPARER'], [actor.id]), {
+    type: 'EMPLOYEE_ADDED',
+    title: `${data.firstName} ${data.lastName} needs pay set up`,
+    body: `Added as ${created.employeeId}, starting ${new Date(data.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}. Set their salary, SSNIT number and TIN.`,
+    href: `/portal/financial/employees/${created.id}?tab=pay&edit=salary`,
+  })
+
   refresh()
-  return { status: 'success', message: `${data.firstName} ${data.lastName} was added as ${created.employeeId}. Set their salary next.`, employeeId: created.id }
+  return { status: 'success', message: `${data.firstName} ${data.lastName} was added as ${created.employeeId}. Payroll preparers have been asked to set up their pay.`, employeeId: created.id }
 }
 
 export async function updateEmployee(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requirePermission('employees.edit')
-  if (!actor) return { status: 'error', message: 'Only payroll preparers can edit employees.' }
+  if (!actor) return { status: 'error', message: 'Only administrators can edit employees.' }
 
   const id = text(formData, 'id')
   const existing = await prisma.employee.findUnique({ where: { id } })
@@ -138,6 +138,10 @@ export async function updateEmployee(_prev: ActionState, formData: FormData): Pr
   const fieldErrors = validate(data)
   if (data.employmentStatus === 'TERMINATED' && existing.employmentStatus !== 'TERMINATED') fieldErrors.employmentStatus = 'To record someone leaving, use Offboard on their profile.'
   if (Object.keys(fieldErrors).length) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors, values: data }
+  const bankFields = ['bankName', 'accountName', 'accountNumber'] as const
+  if (actor.employeeId === id && bankFields.some((key) => (existing[key] ?? '') !== data[key])) {
+    return { status: 'error', message: 'You can’t change your own bank details. Ask another administrator.', values: data }
+  }
 
   let changes: Record<string, { from: unknown; to: unknown }> = {}
   try {
@@ -182,7 +186,7 @@ export async function updateEmployee(_prev: ActionState, formData: FormData): Pr
 
 export async function importEmployees(formData: FormData) {
   const actor = await requirePermission('employees.edit')
-  if (!actor) throw new Error('Only payroll preparers can import employees.')
+  if (!actor) throw new Error('Only administrators can import employees.')
 
   const { rows, error } = parseEmployeeCsv(String(formData.get('csv') ?? ''))
   if (error) throw new Error(error)
@@ -228,12 +232,19 @@ export async function importEmployees(formData: FormData) {
         department: departmentNames.get((row.department || 'General').toLowerCase()) ?? 'General',
         designation: row.designation || null,
         phone: row.phone || null,
-        ssnit_number: row.ssnitNumber || null,
         createdBy: actor.id,
       })),
     })
     for (const employee of created) {
       await audit({ userId: actor.id, action: 'CREATE', entityType: 'Employee', entityId: employee.id, changes: { name: `${employee.firstName} ${employee.lastName}`, employeeId: employee.employeeId, source: 'CSV import' } })
+    }
+    if (created.length) {
+      await notify(await userIdsWithRoles(['PREPARER'], [actor.id]), {
+        type: 'EMPLOYEE_ADDED',
+        title: `${created.length} new ${created.length === 1 ? 'employee needs' : 'employees need'} pay set up`,
+        body: 'They were imported from a spreadsheet. Set their salaries, SSNIT numbers and TINs.',
+        href: '/portal/financial/employees?view=nopay',
+      })
     }
   }
 

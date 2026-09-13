@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Menu } from '@base-ui/react/menu'
-import { Ellipsis } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { Dialog } from '@/components/app/dialog'
 import { useFlags } from '@/components/app/flags'
 import { button } from '@/components/app/styles'
@@ -63,8 +63,8 @@ export function EmployeeAccessActions({
   return (
     <>
       <Menu.Root>
-        <Menu.Trigger aria-label={`Access actions for ${name}`} className={cn(button.icon, 'data-popup-open:bg-secondary')}>
-          <Ellipsis className="size-4" />
+        <Menu.Trigger aria-label={`Access for ${name}`} title="Access" className={cn(button.icon, 'data-popup-open:bg-secondary')}>
+          <KeyRound className="size-4" />
         </Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner sideOffset={4} align="end" className="z-40 outline-none">

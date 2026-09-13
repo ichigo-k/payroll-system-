@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Add employee' }
 
 export default async function NewEmployeePage() {
   const actor = await requirePermission('employees.edit')
-  if (!actor) return <NoPermission title="You can’t add employees" description="Only payroll preparers can add people to payroll." />
+  if (!actor) return <NoPermission title="You can’t add employees" description="Only administrators can add employees. Payroll preparers set up their pay afterwards." />
 
   const departments = await listDepartments()
 
@@ -18,7 +18,7 @@ export default async function NewEmployeePage() {
       <PageHeader
         breadcrumbs={[{ label: 'People' }, { label: 'Employees', href: '/portal/financial/employees' }, { label: 'Add employee' }]}
         title="Add employee"
-        description="Fields marked with an asterisk are required. An employee ID is assigned when you save. Once added, they can sign in to self-service with their work email."
+        description="Fields marked with an asterisk are required. An employee ID is assigned when you save, and payroll preparers are asked to set up their pay. They can sign in to self-service with their work email."
       />
       <EmployeeForm departments={departments} />
     </div>

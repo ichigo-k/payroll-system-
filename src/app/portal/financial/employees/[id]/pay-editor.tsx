@@ -17,12 +17,14 @@ import {
   setSalaryAction,
   updateAllowanceAction,
   updateDeductionAction,
+  updateStatutoryAction,
 } from './pay-actions'
 
 export type PayItem = { id: string; name: string; amount: number; frequency: string; startDate?: string | null; endDate?: string | null }
 
 export type PayDialog =
   | { kind: 'salary' }
+  | { kind: 'statutory' }
   | { kind: 'allowance'; item?: PayItem }
   | { kind: 'deduction'; item?: PayItem }
   | { kind: 'end'; item: 'allowance' | 'deduction'; id: string; label: string }
@@ -44,11 +46,13 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
 export function PayEditor({
   employeeId,
   currentSalary,
+  statutory,
   initialDialog = null,
   children,
 }: {
   employeeId: string
   currentSalary: number | null
+  statutory: { ssnitNumber: string | null; tin: string | null }
   /** Opens a dialog straight away, e.g. when arriving from “Set up pay” on the employees list */
   initialDialog?: PayDialog
   children?: (open: (d: PayDialog) => void) => React.ReactNode
@@ -59,6 +63,7 @@ export function PayEditor({
   const initialForm = (d: PayDialog): Record<string, string> => {
     if (!d) return {}
     if (d.kind === 'salary') return { effectiveFrom: today(), reason: currentSalary ? '' : 'New hire' }
+    if (d.kind === 'statutory') return { ssnitNumber: statutory.ssnitNumber ?? '', tin: statutory.tin ?? '' }
     if (d.kind === 'allowance' || d.kind === 'deduction') {
       const item = d.item
       return item
@@ -135,6 +140,26 @@ export function PayEditor({
   return (
     <>
       {children?.(open)}
+
+      <Dialog
+        width="sm"
+        open={dialog?.kind === 'statutory'}
+        onOpenChange={(o) => !o && close()}
+        title="SSNIT number and TIN"
+        description="Printed on the SSNIT contribution report and the GRA PAYE schedule. Payroll runs flag anyone missing them."
+        footer={footer('Save', () => run(() => updateStatutoryAction(employeeId, { ssnitNumber: form.ssnitNumber ?? '', tin: form.tin ?? '' })))}
+      >
+        <div className="mt-4 grid gap-4">
+          <label className="grid gap-1">
+            <Label>SSNIT number</Label>
+            <input value={form.ssnitNumber ?? ''} onChange={set('ssnitNumber')} autoComplete="off" placeholder="C123456789012" className={`${field} font-mono`} />
+          </label>
+          <label className="grid gap-1">
+            <Label>TIN / Ghana Card number</Label>
+            <input value={form.tin ?? ''} onChange={set('tin')} autoComplete="off" placeholder="GHA-000000000-0" className={`${field} font-mono`} />
+          </label>
+        </div>
+      </Dialog>
 
       <Dialog
         width="sm"

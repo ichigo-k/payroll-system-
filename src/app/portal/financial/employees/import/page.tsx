@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: 'Import employees' }
 
 export default async function ImportEmployeesPage() {
   const actor = await requirePermission('employees.edit')
-  if (!actor) return <NoPermission title="You can’t import employees" description="Only payroll preparers can add people to payroll." />
+  if (!actor) return <NoPermission title="You can’t import employees" description="Only administrators can import employees. Payroll preparers set up their pay afterwards." />
 
   const [existing, departments] = await Promise.all([prisma.employee.findMany({ select: { email: true, employeeId: true } }), listDepartments()])
 

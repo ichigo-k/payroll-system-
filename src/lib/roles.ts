@@ -16,13 +16,13 @@ export function isFinancialRole(role: string | null | undefined) {
 export const ROLE_INFO: Record<RoleName, { label: string; summary: string; access: string[] }> = {
   ADMIN: {
     label: 'Administrator',
-    summary: 'Manages users, roles and company settings. Doesn’t prepare or approve payroll.',
-    access: ['Invite people and manage roles', 'Update company, bank and approval settings', 'Review the audit log'],
+    summary: 'Manages employee records, users, roles and company settings. Doesn’t see pay, prepare or approve payroll.',
+    access: ['Add, import, edit and offboard employees', 'Invite people and manage roles', 'Update company, bank and approval settings', 'Review the audit log'],
   },
   PREPARER: {
     label: 'Payroll preparer',
-    summary: 'Maintains employees and salaries, drafts tax settings and prepares payroll runs.',
-    access: ['Add, import and edit employees', 'Set salaries, allowances and deductions', 'Draft tax configuration', 'Prepare, submit and export payroll runs'],
+    summary: 'Sets up pay for employees, drafts tax settings and prepares payroll runs.',
+    access: ['Set salaries, allowances and deductions', 'Record SSNIT numbers and TINs', 'Draft tax configuration', 'Prepare, submit and export payroll runs'],
   },
   APPROVER: {
     label: 'Payroll approver',
