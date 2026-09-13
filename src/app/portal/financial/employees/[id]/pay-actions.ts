@@ -6,10 +6,11 @@ import { type ActionResult, audit, requirePermission } from '@/lib/access'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
 import { allowanceTypeFor, cleanItemName, deductionTypeFor, formatPercentChange, payItemName, SALARY_CHANGE_REASONS, salaryChangePercent } from '@/lib/pay-items'
 import { prisma } from '@/lib/prisma'
+import { formatMoney } from '@/lib/currency'
 
 const FREQUENCIES = ['monthly', 'annual', 'one-time']
 
-const money = (value: number) => `GHS ${value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const money = (value: number) => formatMoney(value)
 const day = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
 function refresh(employeeId: string) {

@@ -35,6 +35,7 @@ export default async function CompanySettingsPage() {
           bankAccountName: config?.bankAccountName ?? '',
           bankAccountNumber: config?.bankAccountNumber ?? '',
           requiredApprovals: String(config?.requiredApprovals ?? 1),
+          currency: config?.currency ?? 'GHS',
         }}
       />
     </div>

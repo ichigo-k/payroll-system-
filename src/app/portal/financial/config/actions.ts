@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { audit, diff, requirePermission } from '@/lib/access'
+import { isCurrencyCode } from '@/lib/currency'
+import { refreshActiveCurrency } from '@/lib/currency-server'
 import { prisma } from '@/lib/prisma'
 
 export type SettingsState = { status: 'idle' | 'success' | 'error'; message?: string }
@@ -16,6 +18,9 @@ export async function saveCompanySettings(_prev: SettingsState, formData: FormDa
   if (!companyName) return { status: 'error', message: 'Enter the company name.' }
   const requiredApprovals = Number(formData.get('requiredApprovals'))
   if (!Number.isInteger(requiredApprovals) || requiredApprovals < 1 || requiredApprovals > 5) return { status: 'error', message: 'Required approvals must be between 1 and 5.' }
+
+  const currency = text(formData, 'currency') || 'GHS'
+  if (!isCurrencyCode(currency)) return { status: 'error', message: 'Choose a currency from the list.' }
 
   const approvers = await prisma.user.count({ where: { role: 'APPROVER', status: 'active' } })
   if (requiredApprovals > Math.max(1, approvers)) {
@@ -33,6 +38,7 @@ export async function saveCompanySettings(_prev: SettingsState, formData: FormDa
     bankAccountName: text(formData, 'bankAccountName') || null,
     bankAccountNumber: text(formData, 'bankAccountNumber') || null,
     requiredApprovals,
+    currency,
   }
 
   const existing = await prisma.systemConfig.findFirst({ where: { isActive: true } })
@@ -46,7 +52,9 @@ export async function saveCompanySettings(_prev: SettingsState, formData: FormDa
     await audit({ userId: actor.id, action: 'CREATE', entityType: 'SystemConfig', entityId: created.id, changes: { companyName } })
   }
 
-  revalidatePath('/portal/financial/config')
+  refreshActiveCurrency(currency)
+  // Amounts show the currency everywhere, so refresh every page
+  revalidatePath('/', 'layout')
   return { status: 'success', message: 'Company settings saved.' }
 }
 

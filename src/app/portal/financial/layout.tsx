@@ -12,6 +12,8 @@ import { FlagProvider } from '@/components/app/flags'
 import { NotificationBell } from '@/components/app/notification-bell'
 import { button } from '@/components/app/styles'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { CurrencySync } from '@/components/app/currency-sync'
+import { loadActiveCurrency } from '@/lib/currency-server'
 
 async function logoutAction() {
   'use server'
@@ -43,8 +45,11 @@ export default async function FinancialLayout({ children }: { children: React.Re
   const period = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })
   const unread = await prisma.notification.count({ where: { userId: session.user.id, readAt: null } })
 
+  const currency = await loadActiveCurrency()
+
   return (
     <FlagProvider>
+      <CurrencySync code={currency} />
     <SidebarProvider className="min-h-dvh flex-col">
       {/* Slim global top bar spanning the whole app */}
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:px-3">

@@ -5,6 +5,9 @@ import { CircleAlert } from 'lucide-react'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import { type SettingsState, saveCompanySettings } from './actions'
+import { Select } from '@/components/app/select'
+import { CountryFlag } from '@/components/app/country-combobox'
+import { CURRENCIES } from '@/lib/currency'
 
 export type SettingsValues = Record<string, string>
 
@@ -54,6 +57,20 @@ export function SettingsForm({ values, canEdit, approvers }: { values: SettingsV
         <Input name="address" label="Address" values={values} disabled={disabled} />
       </Section>
 
+      <Section id="currency" title="Currency" description="Shown with every amount: on screen, on payslips, in documents and in exports.">
+        <div className="grid gap-1 sm:col-span-2">
+          <span className="text-xs font-semibold text-muted-foreground">Currency</span>
+          <Select
+            name="currency"
+            aria-label="Currency"
+            defaultValue={values.currency || 'GHS'}
+            disabled={disabled}
+            options={CURRENCIES.map((c) => ({ value: c.code, label: `${c.name} (${c.code})`, description: c.symbol, icon: <CountryFlag code={c.country} width={20} /> }))}
+          />
+          <span className="text-xs text-subtlest">Changing it doesn’t convert existing amounts, and PAYE and SSNIT still follow your tax configuration.</span>
+        </div>
+      </Section>
+
       <Section id="statutory" title="Statutory numbers" description="Printed on the PAYE schedule and SSNIT contribution report.">
         <Input name="taxId" label="Employer TIN" values={values} disabled={disabled} hint="GRA taxpayer identification number" />
         <Input name="employerSsnitNumber" label="Employer SSNIT number" values={values} disabled={disabled} />
@@ -67,20 +84,24 @@ export function SettingsForm({ values, canEdit, approvers }: { values: SettingsV
       </Section>
 
       <Section id="approval-policy" title="Approval policy" description="How many different approvers must approve a payroll run. Nobody can approve a run they submitted.">
-        <label className="grid gap-1">
+        <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Approvals required per run</span>
-          <select name="requiredApprovals" defaultValue={values.requiredApprovals ?? '1'} disabled={disabled} className={field}>
-            {[1, 2, 3].map((n) => (
-              <option key={n} value={n} disabled={n > Math.max(1, approvers)}>
-                {n} {n === 1 ? 'approval' : 'approvals'}
-                {n > Math.max(1, approvers) ? ' (not enough approvers)' : ''}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="requiredApprovals"
+            aria-label="Approvals required per run"
+            defaultValue={String(values.requiredApprovals ?? '1')}
+            disabled={disabled}
+            options={[1, 2, 3].map((n) => ({
+              value: String(n),
+              label: `${n} ${n === 1 ? 'approval' : 'approvals'}`,
+              description: n > Math.max(1, approvers) ? 'Not enough active approvers' : n === 1 ? 'Any one approver' : `${n} different approvers`,
+              disabled: n > Math.max(1, approvers),
+            }))}
+          />
           <span className="text-xs text-subtlest">
             You have {approvers} active {approvers === 1 ? 'approver' : 'approvers'}. Two approvals is common for larger payrolls.
           </span>
-        </label>
+        </div>
       </Section>
 
       {canEdit && (

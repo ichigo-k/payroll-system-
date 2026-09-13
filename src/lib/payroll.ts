@@ -1,3 +1,4 @@
+import { activeCurrency, formatMoney } from "@/lib/currency";
 import { TaxBracket, PayrollCalculation } from "./types";
 
 /**
@@ -99,11 +100,8 @@ export function getGhanaTaxBrackets(): TaxBracket[] {
 /**
  * Format currency for display
  */
-export function formatCurrency(
-    amount: number,
-    currency: string = "GHS"
-): string {
-    return `${currency} ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+export function formatCurrency(amount: number, currency?: string): string {
+    return formatMoney(amount, currency ?? activeCurrency());
 }
 
 /**

@@ -5,6 +5,8 @@ import { CircleAlert, CircleCheck, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { button, field } from '@/components/app/styles'
 import { saveTaxConfiguration, type TaxActionState } from './actions'
+import { Select } from '@/components/app/select'
+import { activeCurrency } from '@/lib/currency'
 
 export type TaxFormValues = {
   year: number
@@ -38,7 +40,7 @@ function Field({ label, hint, children, className }: { label: string; hint?: str
 function MoneyInput({ name, defaultValue, disabled }: { name: string; defaultValue: string; disabled: boolean }) {
   return (
     <span className="relative block">
-      <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-muted-foreground">GHS</span>
+      <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-xs text-muted-foreground">{activeCurrency()}</span>
       <input name={name} type="number" step="0.01" min="0" required defaultValue={defaultValue} disabled={disabled} className={cn(inputClass, 'num pl-11 text-right')} />
     </span>
   )
@@ -98,13 +100,7 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
             <input name="year" type="number" min="2000" max="2100" required defaultValue={values.year} disabled={disabled} className={cn(inputClass, 'num')} />
           </Field>
           <Field label="Applies to">
-            <select name="month" defaultValue={values.month} disabled={disabled} className={inputClass}>
-              {MONTHS.map((label, index) => (
-                <option key={label} value={index}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Select name="month" aria-label="Applies to" defaultValue={String(values.month)} disabled={disabled} options={MONTHS.map((label, index) => ({ value: String(index), label }))} />
           </Field>
           <label className="flex items-center gap-2 self-end pb-1.5 text-sm text-foreground">
             <input name="isActive" type="checkbox" defaultChecked={values.isActive} disabled={disabled} className="size-4 accent-primary" />
@@ -118,8 +114,8 @@ export function TaxForm({ values, canEdit, submitLabel = 'Save draft' }: { value
           <table className="w-full min-w-[480px] text-sm">
             <thead>
               <tr className="text-left text-xs text-muted-foreground">
-                <th scope="col" className="pb-1.5 font-medium">From (GHS)</th>
-                <th scope="col" className="pb-1.5 pl-2 font-medium">To (GHS)</th>
+                <th scope="col" className="pb-1.5 font-medium">From ({activeCurrency()})</th>
+                <th scope="col" className="pb-1.5 pl-2 font-medium">To ({activeCurrency()})</th>
                 <th scope="col" className="w-28 pb-1.5 pl-2 font-medium">Rate</th>
                 <th scope="col" className="w-9 pb-1.5"><span className="sr-only">Remove</span></th>
               </tr>

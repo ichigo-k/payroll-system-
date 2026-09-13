@@ -10,6 +10,8 @@ import { SelfServiceNav } from '@/components/app/self-service-nav'
 import { button } from '@/components/app/styles'
 import { FlagProvider } from '@/components/app/flags'
 import { NotificationBell } from '@/components/app/notification-bell'
+import { CurrencySync } from '@/components/app/currency-sync'
+import { loadActiveCurrency } from '@/lib/currency-server'
 
 async function logoutAction() {
   'use server'
@@ -43,8 +45,11 @@ export default async function SelfServiceLayout({
   const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'E'
   const unread = await prisma.notification.count({ where: { userId: session.user.id, readAt: null } })
 
+  const currency = await loadActiveCurrency()
+
   return (
     <FlagProvider>
+      <CurrencySync code={currency} />
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border bg-card print:hidden">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">

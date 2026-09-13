@@ -19,6 +19,10 @@ import {
   updateDeductionAction,
   updateStatutoryAction,
 } from './pay-actions'
+import { Select } from '@/components/app/select'
+import { SuggestInput } from '@/components/app/suggest-input'
+import { activeCurrency, formatMoney } from '@/lib/currency'
+import { safeAction } from '@/lib/safe-action'
 
 export type PayItem = { id: string; name: string; amount: number; frequency: string; startDate?: string | null; endDate?: string | null }
 
@@ -31,7 +35,7 @@ export type PayDialog =
   | null
 
 const today = () => new Date().toISOString().slice(0, 10)
-const money = (value: number) => `GHS ${value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const money = (value: number) => formatMoney(value)
 
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -88,7 +92,7 @@ export function PayEditor({
 
   const run = (fn: () => Promise<ActionResult>) =>
     startTransition(async () => {
-      const result = await fn()
+      const result = await safeAction(fn)
       showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
       if (result.ok) {
         close()
@@ -111,27 +115,26 @@ export function PayEditor({
   const percent = dialog?.kind === 'salary' && amount > 0 ? salaryChangePercent(currentSalary, amount) : null
   const itemFields = (suggestions: string[], listId: string) => (
     <>
-      <label className="grid gap-1 sm:col-span-2">
+      <div className="grid gap-1 sm:col-span-2">
         <Label required>Name on payslip</Label>
-        <input list={listId} value={form.name ?? ''} onChange={set('name')} maxLength={60} placeholder="Type a name or pick a suggestion" autoComplete="off" className={field} />
-        <datalist id={listId}>
-          {suggestions.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
-      </label>
+        <SuggestInput id={listId} value={form.name ?? ''} onChange={(name) => setForm((f) => ({ ...f, name }))} suggestions={suggestions} maxLength={60} placeholder="Type a name, like Fuel or Staff loan" />
+      </div>
       <label className="grid gap-1">
-        <Label required>Amount (GHS)</Label>
+        <Label required>Amount ({activeCurrency()})</Label>
         <input type="number" min="0" step="0.01" value={form.amount ?? ''} onChange={set('amount')} className={`${field} num`} />
       </label>
-      <label className="grid gap-1">
+      <div className="grid gap-1">
         <Label required>Frequency</Label>
-        <select value={form.frequency} onChange={set('frequency')} className={field}>
-          <option value="monthly">Monthly</option>
-          <option value="annual">Annual (spread monthly)</option>
-          <option value="one-time">One-time (next paid run only)</option>
-        </select>
-      </label>
+        <Select
+          value={form.frequency ?? 'monthly'}
+          onValueChange={(frequency) => setForm((f) => ({ ...f, frequency }))}
+          options={[
+            { value: 'monthly', label: 'Monthly', description: 'Every pay run' },
+            { value: 'annual', label: 'Annual', description: 'Spread evenly over 12 months' },
+            { value: 'one-time', label: 'One-time', description: 'Next paid run only' },
+          ]}
+        />
+      </div>
     </>
   )
 
@@ -177,7 +180,7 @@ export function PayEditor({
       >
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1">
-            <Label required>New monthly basic (GHS)</Label>
+            <Label required>New monthly basic ({activeCurrency()})</Label>
             <input type="number" min="0" step="0.01" value={form.amount ?? ''} onChange={set('amount')} className={`${field} num`} />
             {percent !== null && (
               <span className={cn('num text-xs font-semibold', percent > 0 ? 'text-success' : percent < 0 ? 'text-danger' : 'text-muted-foreground')}>
@@ -190,20 +193,11 @@ export function PayEditor({
             <Label required>Effective from</Label>
             <input type="date" value={form.effectiveFrom ?? ''} onChange={set('effectiveFrom')} className={field} />
           </label>
-          <label className="grid gap-1 sm:col-span-2">
+          <div className="grid gap-1 sm:col-span-2">
             <Label required>Reason</Label>
-            <select value={form.reason ?? ''} onChange={set('reason')} className={field}>
-              <option value="" disabled>
-                Choose a reason
-              </option>
-              {SALARY_CHANGE_REASONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+            <Select value={form.reason ?? ''} onValueChange={(reason) => setForm((f) => ({ ...f, reason }))} placeholder="Choose a reason" options={SALARY_CHANGE_REASONS.map((r) => ({ value: r, label: r }))} />
             {form.reason === 'Correction' && <span className="text-xs text-muted-foreground">Use the same start date as the current salary to fix its amount in place.</span>}
-          </label>
+          </div>
           <label className="grid gap-1 sm:col-span-2">
             <Label>Note</Label>
             <input value={form.note ?? ''} onChange={set('note')} maxLength={200} placeholder="For example, promoted to Senior Accountant" className={field} />

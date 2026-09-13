@@ -5,6 +5,7 @@ import { can, PERMISSIONS, type Permission } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import type { RoleName } from '@/lib/roles'
 import { getUserAccess } from '@/lib/user-access'
+import { loadActiveCurrency } from '@/lib/currency-server'
 
 export { getUserAccess, invalidateUserAccess, type UserAccess } from '@/lib/user-access'
 
@@ -29,7 +30,10 @@ export async function currentUser() {
   const session = await auth()
   if (!session?.user?.id) return null
   const access = await getUserAccess(session.user.id)
-  return access && access.status === 'active' ? access : null
+  if (!access || access.status !== 'active') return null
+  // Every page, action and export resolves the user first, so amounts they format use the workspace currency
+  await loadActiveCurrency()
+  return access
 }
 
 export { can }

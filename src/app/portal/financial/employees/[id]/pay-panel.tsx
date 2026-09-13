@@ -5,6 +5,7 @@ import { Pencil } from 'lucide-react'
 import { button } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { AddButton, type PayDialog, PayEditor, type PayItem, RowButtons } from './pay-editor'
+import { formatMoney } from '@/lib/currency'
 
 export type PayData = {
   statutory: { ssnitNumber: string | null; tin: string | null }
@@ -13,7 +14,7 @@ export type PayData = {
   deductions: PayItem[]
 }
 
-const money = (value: number) => `GHS ${value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const money = (value: number) => formatMoney(value)
 const date = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
 const FREQUENCY_LABELS: Record<string, string> = { monthly: 'Monthly', annual: 'Annual, spread monthly', 'one-time': 'One-time' }
 
