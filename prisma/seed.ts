@@ -78,6 +78,19 @@ async function main() {
     });
     console.log(`✅ Approver: ${approverUser.email}\n`);
 
+    const auditorUser = await prisma.user.upsert({
+        where: { email: "auditor@payroll.com" },
+        update: {},
+        create: {
+            email: "auditor@payroll.com",
+            firstName: "Abena",
+            lastName: "Auditor",
+            role: Role.AUDITOR,
+            status: "active",
+        },
+    });
+    console.log(`Auditor: ${auditorUser.email}`);
+
     // ============================================================================
     // DEPARTMENTS
     // ============================================================================
@@ -326,7 +339,10 @@ async function main() {
             personalRelief: 365,
             spouseExemption: 0,
             childExemption: 0,
-            updatedBy: adminUser.id,
+            updatedBy: preparerUser.id,
+            // Seeded configuration counts as already reviewed by the approver
+            approvedAt: new Date(),
+            approvedById: approverUser.id,
         },
     });
 

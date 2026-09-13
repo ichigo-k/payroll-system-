@@ -1,9 +1,9 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
+  provider = "postgresql"
 }
 
 // ============================================================================
@@ -11,31 +11,37 @@ datasource db {
 // ============================================================================
 
 enum Role {
-    ADMIN
-    PREPARER
-    APPROVER
-    EMPLOYEE
+  ADMIN // System administration only: users, settings, audit log. No payroll work.
+  PREPARER // Maker: employees, salaries, tax drafts, payroll runs
+  APPROVER // Checker: approves runs and tax configuration
+  AUDITOR // Read-only access to everything, including the audit log
+  EMPLOYEE // Self-service only
 }
 
 model User {
-    id           String    @id @default(cuid())
-    email        String    @unique
-    firstName    String?
-    lastName     String?
-    role         Role
-    status       String    @default("active") // active, inactive, suspended
-    createdAt    DateTime  @default(now())
-    updatedAt    DateTime  @updatedAt
-    lastLogin    DateTime?
+  id            String    @id @default(cuid())
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  role          Role
+  status        String    @default("active") // active, inactive, suspended
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLogin     DateTime?
+  notifyByEmail Boolean   @default(true)
 
-    // Relations
-    employee          Employee? // If user is an employee
-    submittedPayrolls PayrollRun[] @relation("submittedBy")
-    approvedPayrolls  PayrollRun[] @relation("approvedBy")
-    generatedReports  Report[]     @relation("generatedBy")
-    auditLogs         AuditLog[]
+  // Relations
+  employee          Employee? // If user is an employee
+  createdPayrolls   PayrollRun[]      @relation("createdBy")
+  submittedPayrolls PayrollRun[]      @relation("submittedBy")
+  approvedPayrolls  PayrollRun[]      @relation("approvedBy")
+  generatedReports  Report[]          @relation("generatedBy")
+  auditLogs         AuditLog[]
+  payrollComments   PayrollComment[]
+  payrollDecisions  PayrollDecision[]
+  notifications     Notification[]
 
-    @@map("users")
+  @@map("users")
 }
 
 // ============================================================================
@@ -43,62 +49,64 @@ model User {
 // ============================================================================
 
 enum EmploymentStatus {
-    ACTIVE
-    INACTIVE
-    SUSPENDED
-    TERMINATED
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
 }
 
 model Employee {
-    id           String    @id @default(cuid())
-    firstName    String
-    lastName     String
-    email        String    @unique
-    employeeId   String    @unique // Unique identifier in the organization
-    ssnit_number String?   @unique // SSNIT number for Ghana
-    dateOfBirth  DateTime?
-    gender       String? // M, F, Other
-    phone        String?
-    address      String?
-    city         String?
+  id           String    @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String    @unique
+  employeeId   String    @unique // Unique identifier in the organization
+  ssnit_number String?   @unique // SSNIT number for Ghana
+  tin          String? // Ghana Card PIN / GRA taxpayer identification number
+  dateOfBirth  DateTime?
+  gender       String? // M, F, Other
+  phone        String?
+  address      String?
+  city         String?
 
-    // Employment Info
-    department       String           @default("General")
-    designation      String?
-    startDate        DateTime
-    endDate          DateTime?
-    employmentStatus EmploymentStatus @default(ACTIVE)
+  // Employment Info
+  department       String           @default("General")
+  designation      String?
+  startDate        DateTime
+  endDate          DateTime?
+  employmentStatus EmploymentStatus @default(ACTIVE)
 
-    // Bank Info
-    bankName      String?
-    accountNumber String?
-    accountName   String?
+  // Bank Info
+  bankName      String?
+  accountNumber String?
+  accountName   String?
 
-    // Created & Updated
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    createdBy String // User ID who created
+  // Created & Updated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String // User ID who created
 
-    // Relations
-    user           User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
-    userId         String?               @unique
-    salaryConfigs  SalaryConfiguration[]
-    allowances     Allowance[]
-    deductions     Deduction[]
-    payrollDetails PayrollDetail[]
+  // Relations
+  user           User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId         String?               @unique
+  salaryConfigs  SalaryConfiguration[]
+  allowances     Allowance[]
+  deductions     Deduction[]
+  payrollDetails PayrollDetail[]
+  exclusions     PayrollExclusion[]
 
-    @@map("employees")
+  @@map("employees")
 }
 
 model Department {
-    id          String   @id @default(cuid())
-    name        String   @unique
-    code        String?  @unique
-    description String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String?  @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-    @@map("departments")
+  @@map("departments")
 }
 
 // ============================================================================
@@ -106,73 +114,75 @@ model Department {
 // ============================================================================
 
 model SalaryConfiguration {
-    id         String   @id @default(cuid())
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-    employeeId String
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
 
-    baseSalary    Decimal   @db.Decimal(12, 2)
-    effectiveFrom DateTime
-    effectiveTo   DateTime?
+  baseSalary    Decimal   @db.Decimal(12, 2)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  /// Why the salary changed: new hire, promotion, annual increase, correction...
+  reason        String?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String
 
-    @@index([employeeId])
-    @@map("salary_configurations")
+  @@index([employeeId])
+  @@map("salary_configurations")
 }
 
 enum AllowanceType {
-    HOUSING
-    TRANSPORT
-    MEAL
-    RESPONSIBILITY
-    OTHER
+  HOUSING
+  TRANSPORT
+  MEAL
+  RESPONSIBILITY
+  OTHER
 }
 
 model Allowance {
-    id         String   @id @default(cuid())
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-    employeeId String
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
 
-    type        AllowanceType
-    amount      Decimal       @db.Decimal(12, 2)
-    description String?
-    frequency   String        @default("monthly") // monthly, annual, one-time
-    isActive    Boolean       @default(true)
+  type        AllowanceType
+  amount      Decimal       @db.Decimal(12, 2)
+  description String?
+  frequency   String        @default("monthly") // monthly, annual, one-time
+  isActive    Boolean       @default(true)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([employeeId])
-    @@map("allowances")
+  @@index([employeeId])
+  @@map("allowances")
 }
 
 enum DeductionType {
-    LOAN
-    VOLUNTARY
-    PENSION
-    OTHER
+  LOAN
+  VOLUNTARY
+  PENSION
+  OTHER
 }
 
 model Deduction {
-    id         String   @id @default(cuid())
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-    employeeId String
+  id         String   @id @default(cuid())
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
 
-    type        DeductionType
-    amount      Decimal       @db.Decimal(12, 2)
-    description String?
-    frequency   String        @default("monthly") // monthly, annual, one-time
-    isActive    Boolean       @default(true)
-    startDate   DateTime?
-    endDate     DateTime?
+  type        DeductionType
+  amount      Decimal       @db.Decimal(12, 2)
+  description String?
+  frequency   String        @default("monthly") // monthly, annual, one-time
+  isActive    Boolean       @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@index([employeeId])
-    @@map("deductions")
+  @@index([employeeId])
+  @@map("deductions")
 }
 
 // ============================================================================
@@ -180,32 +190,39 @@ model Deduction {
 // ============================================================================
 
 model TaxConfiguration {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    year  Int
-    month Int @default(0) // 0 = year-wide, 1-12 for specific months
+  year  Int
+  month Int @default(0) // 0 = year-wide, 1-12 for specific months
 
-    // PAYE (Pay As You Earn) - Ghana
-    payeThreshold Decimal @db.Decimal(12, 2) // Tax-free threshold
-    payeBrackets  String  @default("[]") // JSON array of brackets
+  // PAYE (Pay As You Earn) - Ghana
+  payeThreshold Decimal @db.Decimal(12, 2) // Tax-free threshold
+  payeBrackets  String  @default("[]") // JSON array of brackets
 
-    // SSNIT (Social Security & National Insurance Trust)
-    ssnitEmployeeRate Decimal @db.Decimal(5, 2) // e.g., 5.5%
-    ssnitEmployerRate Decimal @db.Decimal(5, 2) // e.g., 13%
+  // SSNIT (Social Security & National Insurance Trust)
+  ssnitEmployeeRate Decimal @db.Decimal(5, 2) // e.g., 5.5%
+  ssnitEmployerRate Decimal @db.Decimal(5, 2) // e.g., 13%
 
-    // Tax Exemptions & Reliefs
-    personalRelief  Decimal @db.Decimal(12, 2)
-    spouseExemption Decimal @db.Decimal(12, 2)
-    childExemption  Decimal @db.Decimal(12, 2)
+  // Tax Exemptions & Reliefs
+  personalRelief  Decimal @db.Decimal(12, 2)
+  spouseExemption Decimal @db.Decimal(12, 2)
+  childExemption  Decimal @db.Decimal(12, 2)
 
-    // Other Settings
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    updatedBy String
+  // Other Settings
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  updatedBy String
 
-    @@unique([year, month])
-    @@map("tax_configurations")
+  // Maker-checker: preparers draft, approvers activate
+  approvedById   String?
+  approvedAt     DateTime?
+  pendingChanges String? // JSON of proposed edits to an approved configuration
+  pendingById    String?
+  pendingAt      DateTime?
+
+  @@unique([year, month])
+  @@map("tax_configurations")
 }
 
 // ============================================================================
@@ -213,108 +230,187 @@ model TaxConfiguration {
 // ============================================================================
 
 enum PayrollStatus {
-    DRAFT
-    SUBMITTED
-    APPROVED
-    REJECTED
-    PAID
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
 }
 
 model PayrollRun {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    month Int // 1-12
-    year  Int
+  month Int // 1-12
+  year  Int
 
-    status PayrollStatus @default(DRAFT)
+  status PayrollStatus @default(DRAFT)
+  notes  String?
 
-    // Tracking
-    submittedBy   User?     @relation("submittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
-    submittedById String?
-    submittedAt   DateTime?
+  // Tracking
+  createdBy   User?   @relation("createdBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
 
-    approvedBy   User?     @relation("approvedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-    approvedById String?
-    approvedAt   DateTime?
+  // Incremented each time the run is submitted, so approvals apply to one version only
+  submissionRound     Int     @default(0)
+  requestedReviewerId String?
 
-    rejectionReason String?
+  paidAt   DateTime?
+  paidById String?
 
-    totalBaseSalary Decimal @default(0) @db.Decimal(15, 2)
-    totalAllowances Decimal @default(0) @db.Decimal(15, 2)
-    totalDeductions Decimal @default(0) @db.Decimal(15, 2)
-    totalTax        Decimal @default(0) @db.Decimal(15, 2)
-    totalSsnit      Decimal @default(0) @db.Decimal(15, 2)
-    totalNetPay     Decimal @default(0) @db.Decimal(15, 2)
+  submittedBy   User?     @relation("submittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  submittedById String?
+  submittedAt   DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  approvedBy   User?     @relation("approvedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById String?
+  approvedAt   DateTime?
 
-    // Relations
-    payrollDetails PayrollDetail[]
-    approvals      Approval[]
-    reports        Report[]        @relation("payrollRun")
+  rejectionReason String?
 
-    @@unique([month, year])
-    @@map("payroll_runs")
+  totalBaseSalary    Decimal @default(0) @db.Decimal(15, 2)
+  totalAllowances    Decimal @default(0) @db.Decimal(15, 2)
+  totalDeductions    Decimal @default(0) @db.Decimal(15, 2)
+  totalTax           Decimal @default(0) @db.Decimal(15, 2)
+  totalSsnit         Decimal @default(0) @db.Decimal(15, 2)
+  totalNetPay        Decimal @default(0) @db.Decimal(15, 2)
+  totalGross         Decimal @default(0) @db.Decimal(15, 2)
+  totalEmployerSsnit Decimal @default(0) @db.Decimal(15, 2)
+  headcount          Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payrollDetails PayrollDetail[]
+  approvals      Approval[]
+  decisions      PayrollDecision[]
+  comments       PayrollComment[]
+  exclusions     PayrollExclusion[]
+  reports        Report[]           @relation("payrollRun")
+
+  @@unique([month, year])
+  @@map("payroll_runs")
 }
 
 model PayrollDetail {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
-    payrollRunId String
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  payrollRunId String
 
-    employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-    employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId String
 
-    baseSalary      Decimal @db.Decimal(12, 2)
-    allowancesTotal Decimal @default(0) @db.Decimal(12, 2)
-    deductionsTotal Decimal @default(0) @db.Decimal(12, 2)
+  // Snapshot of employee details when the run was calculated, so exports match what was approved
+  employeeName  String  @default("")
+  employeeCode  String  @default("")
+  department    String  @default("")
+  designation   String?
+  bankName      String?
+  accountName   String?
+  accountNumber String?
+  ssnitNumber   String?
+  tin           String?
 
-    // Tax Calculations
-    grossIncome   Decimal @db.Decimal(12, 2) // Base + Allowances
-    taxableIncome Decimal @db.Decimal(12, 2) // Gross - Exemptions
-    paye          Decimal @default(0) @db.Decimal(12, 2)
-    ssnitEmployee Decimal @default(0) @db.Decimal(12, 2)
-    ssnitEmployer Decimal @default(0) @db.Decimal(12, 2)
+  // JSON array of review flags, e.g. ["NEW_EMPLOYEE", "BANK_CHANGED"]
+  flags String @default("[]")
 
-    // Final
-    totalDeductions Decimal @db.Decimal(12, 2) // Deductions + Tax + SSNIT
-    netPay          Decimal @db.Decimal(12, 2) // Gross - Total Deductions
+  // JSON snapshot of named items for the payslip: { allowances: [{ name, amount }], deductions: [{ name, amount }] }
+  lineItems String @default("{}")
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  baseSalary      Decimal @db.Decimal(12, 2)
+  allowancesTotal Decimal @default(0) @db.Decimal(12, 2)
+  deductionsTotal Decimal @default(0) @db.Decimal(12, 2)
 
-    @@unique([payrollRunId, employeeId])
-    @@index([employeeId])
-    @@map("payroll_details")
+  // Tax Calculations
+  grossIncome   Decimal @db.Decimal(12, 2) // Base + Allowances
+  taxableIncome Decimal @db.Decimal(12, 2) // Gross - Exemptions
+  reliefs       Decimal @default(0) @db.Decimal(12, 2)
+  paye          Decimal @default(0) @db.Decimal(12, 2)
+  ssnitEmployee Decimal @default(0) @db.Decimal(12, 2)
+  ssnitEmployer Decimal @default(0) @db.Decimal(12, 2)
+
+  // Final
+  totalDeductions Decimal @db.Decimal(12, 2) // Deductions + Tax + SSNIT
+  netPay          Decimal @db.Decimal(12, 2) // Gross - Total Deductions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+  @@map("payroll_details")
 }
 
 // ============================================================================
 // APPROVAL WORKFLOW
 // ============================================================================
 
+enum PayrollDecisionType {
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+/// One approver's decision on one submission round of a payroll run
+model PayrollDecision {
+  id String @id @default(cuid())
+
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  payrollRunId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  userId String
+
+  decision PayrollDecisionType
+  comment  String?
+  round    Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([payrollRunId, userId, round])
+  @@index([payrollRunId])
+  @@map("payroll_decisions")
+}
+
+model PayrollComment {
+  id String @id @default(cuid())
+
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  payrollRunId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  userId String
+
+  body String
+
+  createdAt DateTime @default(now())
+
+  @@index([payrollRunId, createdAt])
+  @@map("payroll_comments")
+}
+
+/// Legacy single-approval table, superseded by PayrollDecision. Kept to avoid a destructive migration.
 enum ApprovalStatus {
-    PENDING
-    APPROVED
-    REJECTED
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Approval {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
-    payrollRunId String
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  payrollRunId String
 
-    status     ApprovalStatus @default(PENDING)
-    comments   String?
-    reviewedAt DateTime?
+  status     ApprovalStatus @default(PENDING)
+  comments   String?
+  reviewedAt DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    @@unique([payrollRunId])
-    @@map("approvals")
+  @@unique([payrollRunId])
+  @@map("approvals")
 }
 
 // ============================================================================
@@ -322,39 +418,39 @@ model Approval {
 // ============================================================================
 
 enum ReportType {
-    SALARY_DETAILS
-    BANK_TRANSFER
-    TAX_REPORT
-    PAYSLIP
-    DEPARTMENT_SUMMARY
-    AUDIT_REPORT
-    STATUTORY_REPORT
+  SALARY_DETAILS
+  BANK_TRANSFER
+  TAX_REPORT
+  PAYSLIP
+  DEPARTMENT_SUMMARY
+  AUDIT_REPORT
+  STATUTORY_REPORT
 }
 
 model Report {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    type         ReportType
-    payrollRun   PayrollRun? @relation("payrollRun", fields: [payrollRunId], references: [id], onDelete: SetNull)
-    payrollRunId String?
+  type         ReportType
+  payrollRun   PayrollRun? @relation("payrollRun", fields: [payrollRunId], references: [id], onDelete: SetNull)
+  payrollRunId String?
 
-    title       String
-    description String?
-    fileFormat  String  @default("PDF") // PDF, CSV, XLSX, JSON
-    filePath    String?
-    fileSize    BigInt?
+  title       String
+  description String?
+  fileFormat  String  @default("PDF") // PDF, CSV, XLSX, JSON
+  filePath    String?
+  fileSize    BigInt?
 
-    generatedBy   User   @relation("generatedBy", fields: [generatedById], references: [id], onDelete: Restrict)
-    generatedById String
+  generatedBy   User   @relation("generatedBy", fields: [generatedById], references: [id], onDelete: Restrict)
+  generatedById String
 
-    generatedAt DateTime  @default(now())
-    expiresAt   DateTime?
+  generatedAt DateTime  @default(now())
+  expiresAt   DateTime?
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 
-    @@index([payrollRunId])
-    @@index([generatedById])
-    @@map("reports")
+  @@index([payrollRunId])
+  @@index([generatedById])
+  @@map("reports")
 }
 
 // ============================================================================
@@ -362,37 +458,41 @@ model Report {
 // ============================================================================
 
 enum AuditAction {
-    CREATE
-    UPDATE
-    DELETE
-    SUBMIT
-    APPROVE
-    REJECT
-    DOWNLOAD
-    LOGIN
-    LOGOUT
+  CREATE
+  UPDATE
+  DELETE
+  SUBMIT
+  APPROVE
+  REJECT
+  DOWNLOAD
+  LOGIN
+  LOGOUT
+  RECALL
+  COMMENT
+  ACTIVATE
+  MARK_PAID
 }
 
 model AuditLog {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
-    userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  userId String
 
-    action     AuditAction
-    entityType String // e.g., "Employee", "PayrollRun", "TaxConfiguration"
-    entityId   String
+  action     AuditAction
+  entityType String // e.g., "Employee", "PayrollRun", "TaxConfiguration"
+  entityId   String
 
-    changes   String? // JSON object of what changed
-    ipAddress String?
-    userAgent String?
+  changes   String? // JSON object of what changed
+  ipAddress String?
+  userAgent String?
 
-    timestamp DateTime @default(now())
+  timestamp DateTime @default(now())
 
-    @@index([userId])
-    @@index([timestamp])
-    @@index([entityType, entityId])
-    @@map("audit_logs")
+  @@index([userId])
+  @@index([timestamp])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
 }
 
 // ============================================================================
@@ -400,22 +500,33 @@ model AuditLog {
 // ============================================================================
 
 model SystemConfig {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    companyName         String
-    companyRegistration String?
-    taxId               String? // Ghana Tax ID
-    logo                String? // URL or path
+  companyName         String
+  companyRegistration String?
+  taxId               String? // Ghana Tax ID
+  logo                String? // URL or path
 
-    currency        String @default("GHS")
-    fiscalYearStart Int    @default(1) // Month (1-12)
-    fiscalYearEnd   Int    @default(12)
+  currency        String @default("GHS")
+  fiscalYearStart Int    @default(1) // Month (1-12)
+  fiscalYearEnd   Int    @default(12)
 
-    isActive  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  // Employer details printed on statutory and bank documents
+  address             String?
+  employerSsnitNumber String?
+  bankName            String?
+  bankBranch          String?
+  bankAccountName     String?
+  bankAccountNumber   String?
 
-    @@map("system_configs")
+  // Approval policy: approvals needed before a payroll run is approved
+  requiredApprovals Int @default(1)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_configs")
 }
 
 // ============================================================================
@@ -433,4 +544,64 @@ model OtpToken {
 
   @@index([email, consumedAt])
   @@map("otp_tokens")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id String @id @default(cuid())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  type  String // e.g. PAYROLL_SUBMITTED, PAYROLL_CHANGES_REQUESTED
+  title String
+  body  String?
+  href  String?
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+// ============================================================================
+// ONBOARDING CHECKLISTS
+// ============================================================================
+
+/// A completed checklist step. Scope is "workspace" for company-wide steps or a user id for personal ones.
+/// Once recorded a step stays complete, even if the data that completed it changes later.
+model ChecklistProgress {
+  id String @id @default(cuid())
+
+  scope   String
+  stepKey String
+
+  completedAt   DateTime @default(now())
+  completedById String?
+
+  @@unique([scope, stepKey])
+  @@map("checklist_progress")
+}
+
+/// An employee deliberately left out of one payroll run, with the reason. Survives recalculation.
+model PayrollExclusion {
+  id String @id @default(cuid())
+
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  payrollRunId String
+
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+
+  reason      String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@unique([payrollRunId, employeeId])
+  @@map("payroll_exclusions")
 }
