@@ -12,6 +12,7 @@ import { NoPermission } from '@/components/app/no-permission'
 import { PageHeader } from '@/components/app/page-header'
 import { Pagination } from '@/components/app/pagination'
 import { button, field } from '@/components/app/styles'
+import { Select } from '@/components/app/select'
 
 export const metadata: Metadata = { title: 'Audit log' }
 
@@ -75,39 +76,18 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
           <span className="text-xs font-semibold text-muted-foreground">Search</span>
           <input name="q" type="search" defaultValue={filters.q} placeholder="Name, email, IP or detail" className={field} />
         </label>
-        <label className="grid gap-1">
+        <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Person</span>
-          <select name="user" defaultValue={filters.user ?? ''} className={field}>
-            <option value="">Anyone</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {actorName(p)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1">
+          <Select name="user" aria-label="Person" defaultValue={filters.user ?? ''} options={[{ value: '', label: 'Anyone' }, ...people.map((p) => ({ value: p.id, label: actorName(p) }))]} />
+        </div>
+        <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Action</span>
-          <select name="action" defaultValue={filters.action ?? ''} className={field}>
-            <option value="">Any action</option>
-            {Object.entries(ACTION_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1">
+          <Select name="action" aria-label="Action" defaultValue={filters.action ?? ''} options={[{ value: '', label: 'Any action' }, ...Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }))]} />
+        </div>
+        <div className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Record type</span>
-          <select name="entity" defaultValue={filters.entity ?? ''} className={field}>
-            <option value="">Any record</option>
-            {Object.entries(ENTITY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <Select name="entity" aria-label="Record type" defaultValue={filters.entity ?? ''} options={[{ value: '', label: 'Any record' }, ...Object.entries(ENTITY_LABELS).map(([value, label]) => ({ value, label }))]} />
+        </div>
         <label className="grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">From</span>
           <input name="from" type="date" defaultValue={filters.from} className={field} />

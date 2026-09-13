@@ -7,6 +7,8 @@ import { CircleAlert } from 'lucide-react'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import { createRunAction } from '../actions'
+import { Select } from '@/components/app/select'
+import { safeAction } from '@/lib/safe-action'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en-GB', { month: 'long' }))
 
@@ -24,7 +26,7 @@ export function NewRunForm({ defaultYear, defaultMonth, takenPeriods }: { defaul
     event.preventDefault()
     setError(null)
     startTransition(async () => {
-      const result = await createRunAction({ year, month, notes })
+      const result = await safeAction(() => createRunAction({ year, month, notes }))
       if (!result.ok || !result.id) {
         setError(result.message)
         return
@@ -42,16 +44,10 @@ export function NewRunForm({ defaultYear, defaultMonth, takenPeriods }: { defaul
           <p className="mt-1 text-sm text-muted-foreground">One run per month. It starts as a draft you can recalculate as often as you need.</p>
         </div>
         <div className="grid max-w-md gap-4 sm:grid-cols-2">
-          <label className="grid gap-1">
+          <div className="grid gap-1">
             <span className="text-xs font-semibold text-muted-foreground">Month</span>
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className={field}>
-              {MONTHS.map((label, i) => (
-                <option key={label} value={i + 1}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Select aria-label="Month" value={String(month)} onValueChange={(v) => setMonth(Number(v))} options={MONTHS.map((label, i) => ({ value: String(i + 1), label }))} />
+          </div>
           <label className="grid gap-1">
             <span className="text-xs font-semibold text-muted-foreground">Year</span>
             <input type="number" min={2000} max={2100} value={year} onChange={(e) => setYear(Number(e.target.value))} className={`${field} num`} />

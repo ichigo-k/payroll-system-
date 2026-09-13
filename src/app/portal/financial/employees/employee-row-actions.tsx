@@ -11,6 +11,8 @@ import type { ActionResult } from '@/lib/access'
 import { OFFBOARDING_REASONS } from '@/lib/employee-rules'
 import { cn } from '@/lib/utils'
 import { deleteEmployeeAction, offboardEmployeeAction, reinstateEmployeeAction } from './lifecycle-actions'
+import { Select } from '@/components/app/select'
+import { safeAction } from '@/lib/safe-action'
 
 const itemClass = 'flex w-full cursor-default items-center rounded-md px-2 py-1.5 text-sm text-foreground outline-none data-disabled:text-subtlest data-highlighted:bg-secondary'
 const dangerItem = cn(itemClass, 'text-danger data-highlighted:bg-danger-soft')
@@ -42,7 +44,7 @@ export function EmployeeRowActions({ employeeId, name, status, hasPay, payrollLi
 
   const run = (action: () => Promise<ActionResult>, after?: () => void) =>
     startTransition(async () => {
-      const result = await action()
+      const result = await safeAction(action)
       showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
       if (result.ok) {
         setConfirm(null)
@@ -144,21 +146,12 @@ export function EmployeeRowActions({ employeeId, name, status, hasPay, payrollLi
             </span>
             <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className={field} />
           </label>
-          <label className="grid gap-1">
+          <div className="grid gap-1">
             <span className="text-xs font-semibold text-muted-foreground">
               Reason<span className="ml-0.5 text-danger">*</span>
             </span>
-            <select value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} className={field}>
-              <option value="" disabled>
-                Choose a reason
-              </option>
-              {OFFBOARDING_REASONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Select value={form.reason} onValueChange={(reason) => setForm((f) => ({ ...f, reason }))} placeholder="Choose a reason" options={OFFBOARDING_REASONS.map((r) => ({ value: r, label: r }))} />
+          </div>
           <label className="grid gap-1 sm:col-span-2">
             <span className="text-xs font-semibold text-muted-foreground">Note</span>
             <textarea value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} rows={2} maxLength={300} className={cn(field, 'h-auto py-2')} />

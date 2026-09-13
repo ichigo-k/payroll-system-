@@ -18,6 +18,8 @@ import {
   requestChangesAction,
   submitRunAction,
 } from '../actions'
+import { Select } from '@/components/app/select'
+import { safeAction } from '@/lib/safe-action'
 
 type DialogKind = 'submit' | 'approve' | 'changes' | 'paid' | 'delete' | 'recall' | null
 
@@ -48,7 +50,7 @@ export function RunActions(props: RunActionsProps) {
 
   const run = (action: () => Promise<ActionResult>, after?: () => void) =>
     startTransition(async () => {
-      const result = await action()
+      const result = await safeAction(action)
       showFlag({ tone: result.ok ? 'success' : 'error', title: result.message })
       if (result.ok) {
         setDialog(null)
@@ -145,18 +147,16 @@ export function RunActions(props: RunActionsProps) {
           </div>
         </dl>
         {props.flaggedLines > 0 && <p className="mt-3 text-sm text-warning">{props.flaggedLines} lines are flagged for review. Approvers will see the flags.</p>}
-        <label className="mt-4 grid gap-1">
+        <div className="mt-4 grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Ask someone to review first (optional)</span>
-          <select value={reviewerId} onChange={(e) => setReviewerId(e.target.value)} className={field}>
-            <option value="">Notify all approvers</option>
-            {props.approvers.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            aria-label="Reviewer"
+            value={reviewerId}
+            onValueChange={setReviewerId}
+            options={[{ value: '', label: 'Notify all approvers', description: 'Anyone can pick it up' }, ...props.approvers.map((a) => ({ value: a.id, label: a.name, description: 'Gets a direct request' }))]}
+          />
           <span className="text-xs text-subtlest">They get a direct request. Any approver can still approve, as your approval policy requires.</span>
-        </label>
+        </div>
         <label className="mt-4 grid gap-1">
           <span className="text-xs font-semibold text-muted-foreground">Note for approvers (optional)</span>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} maxLength={2000} className={`${field} h-auto py-2`} />
