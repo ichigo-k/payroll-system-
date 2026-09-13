@@ -173,6 +173,44 @@ export function accessStatusDraft({
       }
 }
 
+/** General workflow notification (payroll submitted, changes requested, payslips ready...). Never includes pay amounts. */
+export function notificationDraft({
+  to,
+  firstName,
+  subject,
+  heading,
+  body,
+  href,
+  actionLabel = 'Open in PayCompass',
+  details,
+  companyName,
+}: {
+  to: string
+  firstName: string | null
+  subject: string
+  heading: string
+  body: string
+  href?: string | null
+  actionLabel?: string
+  details?: [string, string][]
+  companyName: string
+}): Draft {
+  const blocks: EmailBlock[] = [{ type: 'paragraph', text: firstName ? `Hi ${firstName},` : 'Hi,' }, { type: 'paragraph', text: body }]
+  if (details?.length) blocks.push({ type: 'details', rows: details })
+  if (href) blocks.push({ type: 'button', label: actionLabel, url: appUrl(href) })
+  blocks.push({ type: 'note', text: 'You can turn off email notifications from the notifications page in PayCompass.' })
+  return {
+    subject,
+    content: {
+      preheader: body.slice(0, 120),
+      heading,
+      recipient: to,
+      reason: `You received this because of your role in ${companyName}’s PayCompass workspace.`,
+      blocks,
+    },
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Rendering and sending
 // ---------------------------------------------------------------------------

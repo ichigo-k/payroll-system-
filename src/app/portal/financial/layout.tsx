@@ -4,10 +4,12 @@ import { LogOut, Receipt, Search } from 'lucide-react'
 import { auth, signOut } from '@/lib/auth-config'
 import { prisma } from '@/lib/prisma'
 import { getFinancialNavItems } from '@/lib/nav-items'
+import { isRole, ROLE_INFO } from '@/lib/roles'
 import { BRAND, Logo, LogoMark } from '@/lib/brand'
 import { FinancialNav } from '@/components/app/financial-nav'
 import { CreateMenu } from '@/components/app/create-menu'
 import { FlagProvider } from '@/components/app/flags'
+import { NotificationBell } from '@/components/app/notification-bell'
 import { button } from '@/components/app/styles'
 import { Sidebar, SidebarContent, SidebarFooter, SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
@@ -27,11 +29,6 @@ async function logoutAction() {
   await signOut({ redirectTo: '/login' })
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  ADMIN: 'Administrator',
-  PREPARER: 'Payroll preparer',
-  APPROVER: 'Payroll approver',
-}
 
 export default async function FinancialLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -42,10 +39,12 @@ export default async function FinancialLayout({ children }: { children: React.Re
   const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'User'
   const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U'
   const navItems = getFinancialNavItems(role)
-  const roleLabel = ROLE_LABELS[role] ?? role
+  const roleLabel = isRole(role) ? ROLE_INFO[role].label : role
   const period = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })
+  const unread = await prisma.notification.count({ where: { userId: session.user.id, readAt: null } })
 
   return (
+    <FlagProvider>
     <SidebarProvider className="min-h-dvh flex-col">
       {/* Slim global top bar spanning the whole app */}
       <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-2 sm:px-3">
@@ -76,6 +75,7 @@ export default async function FinancialLayout({ children }: { children: React.Re
             </Link>
           )}
           <CreateMenu role={role} />
+          <NotificationBell initialUnread={unread} notificationsHref="/portal/financial/notifications" />
           <span aria-hidden className="mx-1 hidden h-6 w-px bg-border sm:block" />
           <div className="hidden text-right leading-tight lg:block">
             <p className="text-sm font-medium text-foreground">{fullName}</p>
@@ -108,11 +108,10 @@ export default async function FinancialLayout({ children }: { children: React.Re
         </Sidebar>
 
         <SidebarInset className="min-w-0 bg-background">
-          <FlagProvider>
-            <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-8 lg:px-10">{children}</div>
-          </FlagProvider>
+          <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-8 lg:px-10">{children}</div>
         </SidebarInset>
       </div>
     </SidebarProvider>
+    </FlagProvider>
   )
 }

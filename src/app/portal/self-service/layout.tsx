@@ -8,6 +8,8 @@ import { Logo } from '@/lib/brand'
 import { isFinancialRole } from '@/lib/roles'
 import { SelfServiceNav } from '@/components/app/self-service-nav'
 import { button } from '@/components/app/styles'
+import { FlagProvider } from '@/components/app/flags'
+import { NotificationBell } from '@/components/app/notification-bell'
 
 async function logoutAction() {
   'use server'
@@ -39,10 +41,12 @@ export default async function SelfServiceLayout({
   const { firstName, lastName } = session.user
   const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'Employee'
   const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'E'
+  const unread = await prisma.notification.count({ where: { userId: session.user.id, readAt: null } })
 
   return (
+    <FlagProvider>
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b border-border bg-card">
+      <header className="sticky top-0 z-20 border-b border-border bg-card print:hidden">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
           <Link href="/portal/self-service" className="flex items-center gap-2 rounded-lg px-1.5 py-1 outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring">
             <Logo size={26} />
@@ -55,6 +59,7 @@ export default async function SelfServiceLayout({
                 Payroll workspace
               </Link>
             )}
+            <NotificationBell initialUnread={unread} notificationsHref="/portal/self-service/notifications" />
             <span className="hidden text-sm font-medium sm:inline">{fullName}</span>
             <span aria-hidden className="flex size-8 items-center justify-center rounded-full bg-brand-deep text-xs font-semibold text-white">
               {initials}
@@ -73,5 +78,6 @@ export default async function SelfServiceLayout({
         <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-8">{children}</div>
       </main>
     </div>
+    </FlagProvider>
   )
 }
