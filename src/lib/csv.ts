@@ -1,3 +1,6 @@
+import { findCountryCode } from './countries'
+import { checkDateOfBirth, parseGender } from './people'
+
 /** Splits one CSV line, honouring double-quoted fields that contain commas or escaped quotes. */
 export function parseCsvLine(line: string) {
   const values: string[] = []
@@ -25,7 +28,7 @@ export function parseCsvLine(line: string) {
 
 export const EMPLOYEE_IMPORT_COLUMNS = {
   required: ['first_name', 'last_name', 'email', 'start_date'],
-  optional: ['employee_id', 'department', 'designation', 'phone'],
+  optional: ['employee_id', 'date_of_birth', 'gender', 'nationality', 'address', 'department', 'designation', 'phone'],
 } as const
 
 export type EmployeeImportRow = {
@@ -38,6 +41,10 @@ export type EmployeeImportRow = {
   department: string
   designation: string
   phone: string
+  dateOfBirth: string
+  gender: string
+  nationality: string
+  address: string
   errors: string[]
 }
 
@@ -69,12 +76,20 @@ export function parseEmployeeCsv(csv: string): { rows: EmployeeImportRow[]; erro
       department: col(values, 'department'),
       designation: col(values, 'designation'),
       phone: col(values, 'phone'),
+      dateOfBirth: col(values, 'date_of_birth'),
+      gender: col(values, 'gender'),
+      nationality: col(values, 'nationality'),
+      address: col(values, 'address'),
       errors: [],
     }
     if (!row.firstName) row.errors.push('First name is missing')
     if (!row.lastName) row.errors.push('Last name is missing')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) row.errors.push('Email is missing or invalid')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(row.startDate) || Number.isNaN(new Date(row.startDate).getTime())) row.errors.push('Start date must be YYYY-MM-DD')
+    const dobError = row.dateOfBirth ? checkDateOfBirth(row.dateOfBirth, { required: false }) : null
+    if (dobError) row.errors.push(dobError.replace('Enter a valid date of birth.', 'Date of birth must be YYYY-MM-DD'))
+    if (row.gender && !parseGender(row.gender)) row.errors.push('Gender must be male, female or other')
+    if (row.nationality && !findCountryCode(row.nationality)) row.errors.push('Nationality isn’t a recognised country')
     if (row.email && seenEmails.has(row.email)) row.errors.push('Email appears earlier in this file')
     if (row.employeeId && seenIds.has(row.employeeId)) row.errors.push('Employee ID appears earlier in this file')
     seenEmails.add(row.email)

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { countryName } from '@/lib/countries'
+import { genderLabel } from '@/lib/people'
 import { Info } from 'lucide-react'
 import { maskAccount, requireSelfServiceEmployee } from '@/lib/self-service'
 import { PageHeader } from '@/components/app/page-header'
@@ -19,6 +21,10 @@ export default async function ProfilePage() {
             ['Name', `${employee.firstName} ${employee.lastName}`],
             ['Work email', employee.email],
             ['Phone', employee.phone ?? 'Not on file'],
+            ['Date of birth', employee.dateOfBirth ? date(employee.dateOfBirth) : 'Not on file'],
+            ['Gender', genderLabel(employee.gender) || 'Not on file'],
+            ['Nationality', employee.nationality ? countryName(employee.nationality) : 'Not on file'],
+            ['Address', [employee.address, employee.city].filter(Boolean).join(', ') || 'Not on file'],
           ],
         },
         {

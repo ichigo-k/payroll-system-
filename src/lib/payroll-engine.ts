@@ -78,6 +78,8 @@ export const REVIEW_FLAGS = {
   MISSING_SSNIT: 'Missing SSNIT number',
   MISSING_TIN: 'Missing TIN',
   PART_MONTH: 'Part month (joined or leaving)',
+  RETIREMENT_AGE: 'Reaching retirement age (60)',
+  MISSING_DOB: 'Missing date of birth',
   LEAVER: 'Leaving this period',
 } as const
 export type ReviewFlag = keyof typeof REVIEW_FLAGS

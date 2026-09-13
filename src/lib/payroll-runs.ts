@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { type ActionResult, audit, type UserAccess } from '@/lib/access'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
 import { payItemName } from '@/lib/pay-items'
+import { nearRetirement } from '@/lib/people'
 import { activeInPeriod, calculateLine, monthlyAmount, periodBounds, prorationFactor, type ReviewFlag, reviewFlags } from '@/lib/payroll-engine'
 import { approvalsRemaining, checkDecision, checkEditable, checkMarkPaid, checkRecall, checkSubmit, effectiveTaxConfig, type RunStatus } from '@/lib/payroll-rules'
 import { prisma } from '@/lib/prisma'
@@ -139,6 +140,8 @@ export async function calculateRun(actor: UserAccess, runId: string, { silent = 
       previous ? { baseSalary: Number(previous.baseSalary), netPay: Number(previous.netPay), bankName: previous.bankName, accountNumber: previous.accountNumber } : null,
     )
     if (factor < 1) flags.push('PART_MONTH')
+    if (!employee.dateOfBirth) flags.push('MISSING_DOB')
+    else if (nearRetirement(employee.dateOfBirth, end)) flags.push('RETIREMENT_AGE')
     if (employee.employmentStatus === 'TERMINATED') flags.push('LEAVER')
     details.push({
       payrollRunId: run.id,

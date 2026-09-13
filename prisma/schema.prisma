@@ -36,6 +36,7 @@ model User {
   submittedPayrolls PayrollRun[]      @relation("submittedBy")
   approvedPayrolls  PayrollRun[]      @relation("approvedBy")
   generatedReports  Report[]          @relation("generatedBy")
+  savedReports      SavedReport[]     @relation("savedReports")
   auditLogs         AuditLog[]
   payrollComments   PayrollComment[]
   payrollDecisions  PayrollDecision[]
@@ -64,7 +65,8 @@ model Employee {
   ssnit_number String?   @unique // SSNIT number for Ghana
   tin          String? // Ghana Card PIN / GRA taxpayer identification number
   dateOfBirth  DateTime?
-  gender       String? // M, F, Other
+  gender       String? // MALE, FEMALE, OTHER
+  nationality  String? // ISO 3166-1 alpha-2 country code, e.g. GH
   phone        String?
   address      String?
   city         String?
@@ -425,6 +427,14 @@ enum ReportType {
   DEPARTMENT_SUMMARY
   AUDIT_REPORT
   STATUTORY_REPORT
+  EMPLOYEE_LIST
+  EARNINGS_SUMMARY
+  PAY_HISTORY
+  HEADCOUNT
+  SALARY_CHANGES
+  TAX_CERTIFICATE
+  PAYE_RECONCILIATION
+  CONFIRMATION_LETTER
 }
 
 model Report {
@@ -446,11 +456,36 @@ model Report {
   generatedAt DateTime  @default(now())
   expiresAt   DateTime?
 
+  // Export centre: large exports are built in the background and kept here until they expire
+  status   String  @default("READY") // PENDING, READY, FAILED
+  filters  String? // JSON of the filters used, so the export can be explained and repeated
+  rowCount Int?
+  content  Bytes?
+  error    String?
+
   createdAt DateTime @default(now())
 
   @@index([payrollRunId])
   @@index([generatedById])
   @@map("reports")
+}
+
+/// A named set of export centre filters that can be run again.
+model SavedReport {
+  id String @id @default(cuid())
+
+  name       String
+  reportType String
+  filters    String // JSON
+
+  createdBy   User   @relation("savedReports", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
+  @@map("saved_reports")
 }
 
 // ============================================================================

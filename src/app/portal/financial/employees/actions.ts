@@ -4,10 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
 import { audit, diff, requirePermission } from '@/lib/access'
 import { parseEmployeeCsv } from '@/lib/csv'
+import { findCountryCode } from '@/lib/countries'
 import { ensureDepartment } from '@/lib/departments'
 import { generateEmployeeIds } from '@/lib/employee-ids'
 import { sendNotificationEmail } from '@/lib/email'
 import { notify, userIdsWithRoles } from '@/lib/notifications'
+import { checkDateOfBirth, parseGender } from '@/lib/people'
 import { prisma } from '@/lib/prisma'
 
 export type ActionState = {
@@ -31,6 +33,11 @@ function readForm(formData: FormData) {
     lastName: text(formData, 'lastName'),
     email: text(formData, 'email').toLowerCase(),
     phone: text(formData, 'phone'),
+    dateOfBirth: text(formData, 'dateOfBirth'),
+    gender: text(formData, 'gender'),
+    nationality: text(formData, 'nationality'),
+    address: text(formData, 'address'),
+    city: text(formData, 'city'),
     department: text(formData, 'department'),
     designation: text(formData, 'designation'),
     startDate: text(formData, 'startDate'),
@@ -42,8 +49,13 @@ function readForm(formData: FormData) {
 }
 type FormValues = ReturnType<typeof readForm>
 
-function validate(data: FormValues) {
+function validate(data: FormValues, { creating }: { creating: boolean }) {
   const fieldErrors: Record<string, string> = {}
+  // Required for new people; older records can be saved without it and are flagged instead
+  const dobError = checkDateOfBirth(data.dateOfBirth, { required: creating })
+  if (dobError) fieldErrors.dateOfBirth = dobError
+  if (data.gender && !parseGender(data.gender)) fieldErrors.gender = 'Choose a gender.'
+  if (data.nationality && !findCountryCode(data.nationality)) fieldErrors.nationality = 'Choose a country from the list.'
   if (!data.firstName) fieldErrors.firstName = 'Enter a first name.'
   if (!data.lastName) fieldErrors.lastName = 'Enter a last name.'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) fieldErrors.email = 'Enter a valid work email.'
@@ -66,6 +78,11 @@ function toRecord(data: FormValues, department: string) {
     lastName: data.lastName,
     email: data.email,
     phone: data.phone || null,
+    dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+    gender: parseGender(data.gender),
+    nationality: findCountryCode(data.nationality),
+    address: data.address.slice(0, 200) || null,
+    city: data.city.slice(0, 80) || null,
     department,
     designation: data.designation || null,
     startDate: new Date(data.startDate),
@@ -87,7 +104,7 @@ export async function createEmployee(_prev: ActionState, formData: FormData): Pr
   if (!actor) return { status: 'error', message: 'Only administrators can add employees.' }
 
   const data = readForm(formData)
-  const fieldErrors = validate(data)
+  const fieldErrors = validate(data, { creating: true })
   if (Object.keys(fieldErrors).length) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors, values: data }
 
   let created: { id: string; employeeId: string } | null = null
@@ -135,7 +152,7 @@ export async function updateEmployee(_prev: ActionState, formData: FormData): Pr
   const data = readForm(formData)
   // Leaving and returning go through Offboard and Reinstate, which record the date and reason
   if (existing.employmentStatus === 'TERMINATED') data.employmentStatus = 'TERMINATED'
-  const fieldErrors = validate(data)
+  const fieldErrors = validate(data, { creating: false })
   if (data.employmentStatus === 'TERMINATED' && existing.employmentStatus !== 'TERMINATED') fieldErrors.employmentStatus = 'To record someone leaving, use Offboard on their profile.'
   if (Object.keys(fieldErrors).length) return { status: 'error', message: 'Fix the highlighted fields.', fieldErrors, values: data }
   const bankFields = ['bankName', 'accountName', 'accountNumber'] as const
@@ -232,6 +249,10 @@ export async function importEmployees(formData: FormData) {
         department: departmentNames.get((row.department || 'General').toLowerCase()) ?? 'General',
         designation: row.designation || null,
         phone: row.phone || null,
+        dateOfBirth: row.dateOfBirth ? new Date(row.dateOfBirth) : null,
+        gender: parseGender(row.gender),
+        nationality: findCountryCode(row.nationality),
+        address: row.address || null,
         createdBy: actor.id,
       })),
     })

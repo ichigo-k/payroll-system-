@@ -27,7 +27,6 @@ const VIEWS = {
     label: 'No pay set',
     where: (): Prisma.EmployeeWhereInput => ({ employmentStatus: 'ACTIVE', salaryConfigs: { none: { OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }] } } }),
   },
-  recent: { label: 'Added in last 30 days', where: () => ({ createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }) },
 } satisfies Record<string, { label: string; where: () => Prisma.EmployeeWhereInput }>
 type ViewKey = keyof typeof VIEWS
 

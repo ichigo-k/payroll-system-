@@ -5,11 +5,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CircleAlert } from 'lucide-react'
 import { BankCombobox } from '@/components/app/bank-combobox'
+import { CountryCombobox } from '@/components/app/country-combobox'
+import { DateOfBirthField } from '@/components/app/date-of-birth-field'
+import { GenderSelect } from '@/components/app/gender-select'
 import { DepartmentCombobox } from '@/components/app/department-combobox'
 import { useFlags } from '@/components/app/flags'
 import { button, field } from '@/components/app/styles'
 import { cn } from '@/lib/utils'
 import { type ActionState, createEmployee, updateEmployee } from './actions'
+import { Select } from '@/components/app/select'
 
 const initialState: ActionState = { status: 'idle' }
 
@@ -95,6 +99,23 @@ export function EmployeeForm({ departments, initial, employeeId }: { departments
         <Field label="Phone" htmlFor="phone">
           <input id="phone" name="phone" defaultValue={values.phone} type="tel" autoComplete="off" placeholder="+233" className={field} />
         </Field>
+        <Field label="Date of birth" htmlFor="dateOfBirth" required={!editing} error={errors.dateOfBirth} hint="Used for SSNIT and retirement age. Only administrators see the full date.">
+          <DateOfBirthField id="dateOfBirth" name="dateOfBirth" defaultValue={values.dateOfBirth} invalid={!!errors.dateOfBirth} />
+        </Field>
+        <Field label="Gender" htmlFor="gender" error={errors.gender}>
+          <GenderSelect id="gender" name="gender" defaultValue={values.gender} />
+        </Field>
+        <Field label="Nationality" htmlFor="nationality" error={errors.nationality}>
+          <CountryCombobox id="nationality" name="nationality" defaultValue={values.nationality} />
+        </Field>
+        <Field label="City or town" htmlFor="city">
+          <input id="city" name="city" defaultValue={values.city} autoComplete="off" placeholder="Accra" className={field} />
+        </Field>
+        <div className="sm:col-span-2">
+          <Field label="Residential address" htmlFor="address" hint="House number, street and area, or a GhanaPost digital address.">
+            <input id="address" name="address" defaultValue={values.address} autoComplete="off" maxLength={200} placeholder="GA-123-4567" className={field} />
+          </Field>
+        </div>
       </Section>
 
       <Section title="Employment" description="Where they sit in the organisation and when they started.">
@@ -116,15 +137,18 @@ export function EmployeeForm({ departments, initial, employeeId }: { departments
             hint={values.employmentStatus === 'TERMINATED' ? 'This person has left. Use Reinstate on their profile to bring them back.' : 'Only active employees are paid. To record someone leaving, use Offboard on their profile.'}
           >
             {values.employmentStatus === 'TERMINATED' ? (
-              <select id="employmentStatus" disabled value="TERMINATED" className={field}>
-                <option value="TERMINATED">Left the company</option>
-              </select>
+              <Select id="employmentStatus" disabled value="TERMINATED" options={[{ value: 'TERMINATED', label: 'Left the company' }]} />
             ) : (
-              <select id="employmentStatus" name="employmentStatus" defaultValue={values.employmentStatus ?? 'ACTIVE'} className={field}>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-                <option value="SUSPENDED">Suspended</option>
-              </select>
+              <Select
+                id="employmentStatus"
+                name="employmentStatus"
+                defaultValue={values.employmentStatus || 'ACTIVE'}
+                options={[
+                  { value: 'ACTIVE', label: 'Active', description: 'Included in payroll' },
+                  { value: 'INACTIVE', label: 'Inactive', description: 'Not paid, for example on unpaid leave' },
+                  { value: 'SUSPENDED', label: 'Suspended', description: 'Not paid while suspended' },
+                ]}
+              />
             )}
           </Field>
         )}
